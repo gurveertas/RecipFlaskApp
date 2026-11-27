@@ -1,0 +1,23 @@
+requests>=2.31
+trafilatura>=1.8
+lxml_html_clean>=0.4       # trafilatura -> justext -> lxml.html.clean, which lxml 5 split
+                           # into its own package. Without it `import trafilatura` raises and
+                           # EVERY fetch fails — a clean install from this file proved it.
+pypdf>=5.0                 # many vendor spec sheets/support docs are raw PDFs, not HTML
+dateparser>=1.2
+PyYAML>=6.0
+SQLAlchemy>=2.0          # Foundation stage: config DB (replaces flat YAML at runtime)
+pytest>=8.0                # tests/ — the REACS pillar + QA rule regression suite
+# web front end (webapp/):
+Flask>=3.0
+Werkzeug>=3.0              # imported directly (ProxyFix in webapp/app.py); it arrives with
+                           # Flask anyway, but what we import by name, we name here
+Markdown>=3.6
+nh3>=0.2                   # sanitise LLM-written markdown->HTML before |safe rendering
+gunicorn>=21.2
+# live generation:
+#   Gemini (free) and other OpenAI-compatible providers use the `openai` client:
+openai>=1.0
+json-repair>=0.30          # salvage malformed JSON from LLM output
+#   Anthropic / Claude (optional alternative):
+# anthropic>=0.39

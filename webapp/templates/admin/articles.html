@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Content Brief + Writer — Blog Generator</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">Content Brief + Writer</div>
+        <div class="app-header__subtitle">Approved topics → structured brief → full article</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {% include "_flashes.html" %}
+
+      <details class="help">
+        <summary>How this page works</summary>
+        <div class="help__body">
+          <p>The classic Brief + Writer list (Article Studio is the guided version). Only topics approved as <b>create</b> appear as brief candidates. Creating a brief runs live research and refuses when nothing verifiable is found; writing runs up to 3 QA-checked attempts.</p>
+        </div>
+      </details>
+
+      <!-- ---- create brief form ---- -->
+      <form class="card" method="post" action="{{ url_for('articles.create_brief') }}"
+            data-busy="Creating the brief — researching live sources, then drafting the brief"
+            data-busy-hint="Usually 20–60 seconds">
+        <div class="card__body">
+          <div class="section-label">Create a brief from an approved topic</div>
+          {% if not candidates %}
+            <div class="banner banner--info">
+              No approved topics without a brief yet. Approve a topic ("create") in the
+              <a href="{{ url_for('topics.topic_board') }}">Topic Engine</a> first.
+            </div>
+          {% else %}
+          <div class="searchbar__inner">
+            <div class="searchbar__field searchbar__field--grow">
+              <select class="input" name="topic_id" required>
+                <option value="" disabled selected>Approved topic…</option>
+                {% for t in candidates %}
+                  <option value="{{ t.id }}">{{ t.title }} ({{ t.vendor.name }}, opportunity {{ t.opportunity_score }})</option>
+                {% endfor %}
+              </select>
+            </div>
+            <button type="submit" class="btn btn--primary">Create brief</button>
+          </div>
+          <p class="field__hint" style="margin-top:var(--space-3)">
+            Runs live research for the topic and drafts a structured brief. Refuses if the topic
+            isn't approved, or if no verified facts are found — the Writer never invents facts.
+          </p>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- ---- article list ---- -->
+      <section class="card">
+        <div class="card__body">
+          <div class="section-label">Articles ({{ articles|length }})</div>
+          {% if not articles %}
+          <div class="placeholder">
+            {% include '_empty_icon.html' %}
+            <div class="placeholder__title">No articles yet</div>
+            <div>Create a brief above to start one.</div>
+          </div>
+          {% else %}
+          <table class="data-table">
+            <thead><tr><th>Title</th><th>Status</th><th>QA</th><th>Words</th><th></th></tr></thead>
+            <tbody>
+              {% for a in articles %}
+              <tr>
+                <td><a href="{{ url_for('articles.article_detail', article_id=a.id) }}"><b>{{ a.title }}</b></a></td>
+                <td><span class="badge badge--{{ 'info' if a.status.value == 'brief' else 'pass' }}">{{ a.status.value }}</span></td>
+                <td>
+                  {% if a.qa_passed is none %}
+                    <span class="data-table__muted">—</span>
+                  {% elif a.qa_passed %}
+                    <span class="badge badge--pass">passed</span>
+                  {% else %}
+                    <span class="badge badge--fail">blocked</span>
+                  {% endif %}
+                </td>
+                <td>{{ a.word_count or '—' }}</td>
+                <td>
+                  <form method="post" action="{{ url_for('articles.delete', article_id=a.id) }}">
+                    <button type="submit" class="btn btn--sm btn--ghost">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </main>
+  {% include "_usage_modal.html" %}
+  {% include "_busy.html" %}
+</body>
+</html>

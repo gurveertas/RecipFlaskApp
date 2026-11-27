@@ -1,0 +1,155 @@
+/* ============================================================================
+   layout.css — page structure & layout utilities
+   ----------------------------------------------------------------------------
+   The app shell: a sticky, full-bleed brand header, and the main content area
+   below it (where the search card + results card live, see index.html and
+   components.css). Plus a few small, composable layout utilities (.stack,
+   .cluster) reusable across future pages.
+   ============================================================================ */
+
+/* ---- app header ----------------------------------------------------------
+   Sticky, full-bleed: brand hard left, theme toggle hard right. The search
+   inputs live in their own .card in .app-main below — not part of this bar. */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: saturate(1.4) blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  max-width: 46%;
+  gap: var(--space-3);
+  min-width: 0;
+  /* Shrink the title before the nav: a long article title used to squeeze the
+     nav links until they wrapped onto two lines. */
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+/* Red Education's cube icon (the site's own favicon asset) — red/blue on a
+   transparent background, legible on light and dark alike, so one file
+   serves both themes with no swap rules. */
+.app-header__mark {
+  flex: none;
+  width: 32px; height: 32px;
+  background: url("../img/red-education-icon.webp") no-repeat center / contain;
+}
+.app-header__titles { min-width: 0; }
+.app-header__title {
+  /* Wraps rather than truncating — an article title cut to "The Complete NCAP
+     Certification 2026 Guide: Objectives,…" tells you less than the tab does.
+     The nav is protected instead by never shrinking (see .app-nav), so a long
+     title grows the header downward and never pushes the links under the
+     usage chip. */
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.2;
+}
+.app-header__subtitle {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.app-header__spacer { flex: 1; }
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  /* Never shrinks. nowrap stops a link breaking onto two lines, but while the
+     nav itself could shrink, its links spilled out of the box and ran under
+     the usage chip: "Guide" was cut off at 1512px wide, and three links were
+     hidden at 1100px. The brand block is now the only thing that gives way —
+     its title wraps — and below the width where that stops being readable
+     the nav moves to its own row (the 1200px query). */
+  flex: none;
+}
+.app-header .usage-chip,
+.app-header .icon-btn { flex: none; }
+
+/* ---- page shell ---------------------------------------------------------- */
+.app-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-7) var(--space-6) calc(var(--space-7) * 1.5);
+}
+
+/* Card grid — used by Article Studio's vendor step, which overrides the
+   column template inline (auto-fill cards rather than a fixed sidebar). */
+.app-grid {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+/* ---- layout utilities (composable) --------------------------------------- */
+.stack > * + * { margin-top: var(--space-5); }
+.cluster {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Too narrow for brand + nav + usage chip + theme toggle on one row. The nav
+   alone is ~505px and the chip ~220px, so below this width the brand would be
+   left under ~300px and a long article title would stack four or five lines
+   deep. The nav gets its own row instead; chip and toggle stay by the title. */
+@media (max-width: 1200px) {
+  .app-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    column-gap: var(--space-3);
+    row-gap: var(--space-2);
+  }
+  .app-header__brand { max-width: none; }
+  .app-header__spacer { display: none; }
+  .app-nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .app-nav::-webkit-scrollbar { display: none; }
+  .app-header .usage-chip { grid-column: 2; grid-row: 1; }
+  .app-header .icon-btn { grid-column: 3; grid-row: 1; }
+}
+
+@media (max-width: 760px) {
+  .app-header {
+    gap: var(--space-2);
+    width: 100%;
+    max-width: 100vw;
+    overflow: hidden;
+    padding: var(--space-3) var(--space-4) var(--space-2);
+  }
+  .app-header__subtitle { display: none; }
+  .app-nav {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 calc(var(--space-4) * -1);
+    padding: 0 var(--space-4);
+  }
+  .app-header .usage-chip__label { display: none; }
+  .app-main {
+    width: 100%;
+    max-width: 100vw;
+    min-width: 0;
+    padding: var(--space-5) var(--space-4) var(--space-7);
+  }
+  .stack { min-width: 0; }
+}
+@media (max-width: 480px) {
+  .app-header .usage-chip { display: none; }
+}

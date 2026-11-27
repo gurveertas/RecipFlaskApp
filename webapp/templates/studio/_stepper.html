@@ -1,0 +1,41 @@
+{% macro stepper(current, vendor_id=none, article_id=none) %}
+<nav class="stepper">
+  <a class="stepper__node{{ ' stepper__node--current' if current == 'vendor' else '' }}"
+     href="{{ url_for('studio.vendor_step') }}"><span class="stepper__idx">01</span>Vendor</a>
+  <span class="stepper__sep">&rsaquo;</span>
+  {% if vendor_id %}
+  <a class="stepper__node{{ ' stepper__node--current' if current == 'topic' else '' }}"
+     href="{{ url_for('studio.topics_for_vendor', vendor_id=vendor_id) }}"><span class="stepper__idx">02</span>Topic</a>
+  {% else %}
+  <span class="stepper__node"><span class="stepper__idx">02</span>Topic</span>
+  {% endif %}
+  <span class="stepper__sep">&rsaquo;</span>
+  {% if article_id %}
+  <a class="stepper__node{{ ' stepper__node--current' if current == 'brief' else '' }}"
+     href="{{ url_for('studio.brief_step', article_id=article_id) }}"><span class="stepper__idx">03</span>Brief</a>
+  {% else %}
+  <span class="stepper__node"><span class="stepper__idx">03</span>Brief</span>
+  {% endif %}
+  <span class="stepper__sep">&rsaquo;</span>
+  {% if article_id %}
+  <a class="stepper__node{{ ' stepper__node--current' if current == 'article' else '' }}"
+     href="{{ url_for('studio.article_step', article_id=article_id) }}"><span class="stepper__idx">04</span>Article</a>
+  {% else %}
+  <span class="stepper__node"><span class="stepper__idx">04</span>Article</span>
+  {% endif %}
+  <span class="stepper__sep">&rsaquo;</span>
+  {% if article_id %}
+  <a class="stepper__node{{ ' stepper__node--current' if current == 'preview' else '' }}"
+     href="{{ url_for('studio.preview_step', article_id=article_id) }}"><span class="stepper__idx">05</span>Preview</a>
+  {% else %}
+  <span class="stepper__node"><span class="stepper__idx">05</span>Preview</span>
+  {% endif %}
+  <span class="stepper__sep">&rsaquo;</span>
+  {% if article_id %}
+  <a class="stepper__node stepper__node--stub{{ ' stepper__node--current' if current == 'publish' else '' }}"
+     href="{{ url_for('studio.publish_step', article_id=article_id) }}"><span class="stepper__idx">06</span>Publish</a>
+  {% else %}
+  <span class="stepper__node stepper__node--stub"><span class="stepper__idx">06</span>Publish</span>
+  {% endif %}
+</nav>
+{% endmacro %}

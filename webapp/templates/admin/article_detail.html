@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ article.title }} — Content Brief + Writer</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  {% from "_review.html" import review_panels, review_script %}
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">{{ article.title }}</div>
+        <div class="app-header__subtitle">{{ article.vendor.name }} · {{ article.status.value }}</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      <div class="breadcrumb"><a href="{{ url_for('articles.article_list') }}">Content Brief + Writer</a> / {{ article.title }}</div>
+
+      {% include "_flashes.html" %}
+
+      {% set reacs_ready = article.reacs_score is not none and article.reacs_score >= 0 %}
+      {% set publish_ready = article.qa_passed and reacs_ready and article.reacs_passed %}
+      {% if article.status.value == 'draft' and article.qa_checks %}
+      {{ review_panels(article, url_for('articles.fix', article_id=article.id),
+                       reacs_ready, publish_ready, unfixable=unfixable) }}
+      {% endif %}
+
+      <!-- ---- brief ---- -->
+      <section class="card">
+        <div class="card__body">
+          <div class="section-label">Brief</div>
+          <div class="meta">
+            <span class="meta__item"><b>Format:</b> {{ article.brief.format }}</span>
+            <span class="meta__item"><b>Keyword:</b> {{ article.keyword }}</span>
+          </div>
+          <p class="text-muted" style="margin-top:var(--space-2)">{{ article.brief.audience }}</p>
+          <div class="section-label" style="margin-top:var(--space-4)">Outline</div>
+          <ul>
+            {% for h in article.brief.outline %}<li>{{ h }}</li>{% endfor %}
+          </ul>
+          <div class="section-label" style="margin-top:var(--space-4)">Key points</div>
+          <ul>
+            {% for p in article.brief.key_points %}<li>{{ p }}</li>{% endfor %}
+          </ul>
+          <div class="meta" style="margin-top:var(--space-4)">
+            <span class="meta__item"><b>CTA intent:</b> {{ article.brief.cta }}</span>
+          </div>
+
+          {% if article.status.value == 'brief' %}
+          <form method="post" action="{{ url_for('articles.write', article_id=article.id) }}" style="margin-top:var(--space-4)"
+                data-busy="Writing the article — live research, drafting, full QA"
+                data-busy-hint="Can take 1–3 minutes (up to 3 attempts with targeted QA fixes)">
+            <button type="submit" class="btn btn--primary">Write article</button>
+          </form>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- ---- written article ---- -->
+      {% if article.status.value == 'draft' %}
+      <section class="card">
+        <div class="card__body">
+          <div class="section-label">Draft</div>
+          <div class="meta">
+            <span class="meta__item"><b>{{ article.word_count }}</b> words</span>
+            <span class="meta__item"><b>Meta title:</b> {{ article.meta_title|length }} chars</span>
+            <span class="meta__item"><b>Meta description:</b> {{ article.meta_description|length }} chars</span>
+          </div>
+          <p class="text-muted" style="margin-top:var(--space-2);font-size:var(--text-sm)">{{ article.meta_description }}</p>
+          <div class="article" style="margin-top:var(--space-4)">{{ content_html|safe }}</div>
+          {% if article.byline_instructor and article.byline_instructor.name %}
+          <p class="text-muted" style="margin-top:var(--space-3);font-size:var(--text-sm);font-style:italic">
+            Technically reviewed by {{ article.byline_instructor.name }}, {{ article.byline_instructor.credentials }}
+          </p>
+          {% endif %}
+
+          {# CTA is already the last paragraph of the body above (see
+             studio/article.html) — no standalone panel, or it shows twice. #}
+
+          {% if article.references %}
+          <div class="section-label" style="margin-top:var(--space-4)">References</div>
+          <ul class="reflist">
+            {% for r in article.references %}
+              <li><span class="reflist__tag">[{{ r.tag }}]</span>
+                <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title or r.url }}</a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          <form method="post" action="{{ url_for('articles.write', article_id=article.id) }}" style="margin-top:var(--space-4)"
+                data-busy="Rewriting the article — live research, drafting, full QA"
+                data-busy-hint="Can take 1–3 minutes (up to 3 attempts with targeted QA fixes)">
+            <button type="submit" class="btn">Rewrite</button>
+          </form>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </main>
+  {% include "_usage_modal.html" %}
+  {% include "_busy.html" %}
+  {{ review_script() }}
+</body>
+</html>

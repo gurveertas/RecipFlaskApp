@@ -1,0 +1,32 @@
+{# Shared top-nav links — the exact same items, same order, on EVERY page,
+   so the nav row (and everything to its right: the usage indicator, the
+   theme toggle) never shifts position as you navigate between pages.
+
+   Previously each page hand-picked which links to show — omitting a
+   self-link, substituting "← Blog Generator" for a plain link, skipping
+   "Guide" on the Guide page itself — harmless individually, but it meant
+   the same visual slot held a different button depending which page you
+   were on. A link to the page you're already on is just a no-op click, not
+   a bug — that's the tradeoff for a nav bar that never jumps around.
+
+   The current section is marked with .nav-link--current (darker + bold).
+   Matched on the BLUEPRINT rather than the exact endpoint, so every page
+   within a section keeps its nav item lit — Article Studio's five steps and
+   all the /admin/vendors CRUD pages are each one destination to the reader,
+   not five. #}
+{% set bp = request.blueprint or '' %}
+{% set ep = request.endpoint or '' %}
+{% set is_domains = ep in ['admin.domain_gaps', 'admin.domain_ignore',
+                           'admin.domain_restore', 'admin.domain_approve'] %}
+<nav class="app-nav" aria-label="Primary">
+<a class="nav-link {{ 'nav-link--current' if ep == 'index' }}"
+   href="{{ url_for('index') }}">Blog Generator</a>
+<a class="nav-link {{ 'nav-link--current' if bp in ['studio', 'articles', 'topics'] }}"
+   href="{{ url_for('studio.vendor_step') }}">Article Studio</a>
+<a class="nav-link {{ 'nav-link--current' if bp == 'admin' and not is_domains }}"
+   href="{{ url_for('admin.vendor_list') }}">Manage vendors</a>
+<a class="nav-link {{ 'nav-link--current' if is_domains }}"
+   href="{{ url_for('admin.domain_gaps') }}">Allowlist gaps</a>
+<a class="nav-link {{ 'nav-link--current' if ep == 'guide' }}"
+   href="{{ url_for('guide') }}">Guide</a>
+</nav>

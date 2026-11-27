@@ -1,0 +1,122 @@
+# =============================================================================
+# TRUSTED SOURCE ALLOWLIST  (edit freely — this file is the single source of
+# truth for what "trusted and well known" means for your blog)
+#
+# tier 1 = cite freely. Vendor blogs are authoritative for THEIR OWN products,
+#          but are also marketing: security/threat claims from a vendor source
+#          require independent corroboration (enforced in verification).
+# tier 2 = established security press. Cite, but cross-check factual claims.
+#
+# Anything NOT on this list is ignored during retrieval.
+# =============================================================================
+
+tier1_vendor:
+  - domain: research.checkpoint.com   # Check Point Research
+    vendor: Check Point
+  - domain: blog.checkpoint.com
+    vendor: Check Point
+  - domain: unit42.paloaltonetworks.com   # Palo Alto Unit 42 threat research
+    vendor: Palo Alto Networks
+  - domain: paloaltonetworks.com
+    vendor: Palo Alto Networks
+  - domain: f5.com                     # includes F5 Labs (f5.com/labs)
+    vendor: F5
+  - domain: nutanix.com
+    vendor: Nutanix
+  - domain: avaya.com
+    vendor: Avaya
+  # Avaya's OWN training/certification portal, on a separate registrable
+  # domain so site:avaya.com never reached it. Avaya topics were failing
+  # outright — retrieval returned 0 sources for 2 of 5 and a single page
+  # for the rest.
+  - domain: avaya-learning.com
+    vendor: Avaya
+  # --- vendors Red Education trains on / blogs about (own cert+product facts) ---
+  # Primary-source access does not imply a current commercial partnership.
+  # Cisco is retained for factual research and comparisons, while its unset
+  # Vendor Centre priority disables topic/article/publishing workflows.
+  - domain: cisco.com
+    vendor: Cisco
+  - domain: fortinet.com
+    vendor: Fortinet
+  - domain: netskope.com
+    vendor: Netskope
+  - domain: pingidentity.com
+    vendor: Ping Identity
+  - domain: forgerock.com
+    vendor: ForgeRock
+  - domain: zscaler.com
+    vendor: Zscaler
+  - domain: cyberark.com
+    vendor: IDIRA
+  - domain: arista.com
+    vendor: Arista Networks
+  - domain: sophos.com
+    vendor: Sophos
+  - domain: trendmicro.com
+    vendor: Trend Micro
+  - domain: infoblox.com
+    vendor: Infoblox
+  - domain: broadcom.com          # Symantec / Blue Coat now under Broadcom
+    vendor: Symantec
+  - domain: aws.amazon.com
+    vendor: AWS
+  - domain: extremenetworks.com
+    vendor: Extreme Networks
+  - domain: riverbed.com
+    vendor: Riverbed
+  - domain: ivanti.com            # incl. MobileIron
+    vendor: Ivanti
+  - domain: paessler.com
+    vendor: Paessler
+  - domain: algosec.com
+    vendor: AlgoSec
+
+tier1_authority:        # government / standards bodies — no vendor marketing angle
+  - domain: nvd.nist.gov
+  - domain: nist.gov
+  - domain: cisa.gov
+  - domain: attack.mitre.org
+  - domain: cve.mitre.org
+  - domain: cve.org
+
+tier2_press:            # established editorial outlets
+  - domain: bleepingcomputer.com
+  - domain: darkreading.com
+  - domain: securityweek.com
+  - domain: thehackernews.com
+  - domain: krebsonsecurity.com
+  - domain: csoonline.com
+  - domain: scmagazine.com
+  - domain: scworld.com
+  - domain: theregister.com
+
+# Cert/training authorities + workforce/salary data (used for the certification
+# and career/salary guides that make up most of the blog). All treated as tier 2
+# for corroboration — a salary/career claim needs 2 independent domains here (or
+# with press) to reach VERIFIED.
+tier2_data:
+  # certification / training authorities (vendor-neutral)
+  - domain: isc2.org
+  - domain: comptia.org
+  - domain: isaca.org
+  - domain: giac.org
+  - domain: sans.org
+  - domain: eccouncil.org
+  - domain: coursera.org
+  - domain: credly.com
+  - domain: pearsonvue.com
+  - domain: skillsoft.com         # IT Skills & Salary report (ex-Global Knowledge)
+
+# Salary / vacancy aggregators. Searched ONLY for topics about pay, careers,
+# demand or "is it worth it" (see Allowlist.domains_for_topic). They have a
+# page for practically every string, so on any other topic they return a
+# confident-looking match to an unrelated organisation rather than nothing.
+tier2_jobs:
+  - domain: roberthalf.com        # tech salary guide
+  - domain: dice.com
+  - domain: levels.fyi
+  - domain: payscale.com
+  - domain: glassdoor.com
+  - domain: indeed.com
+  - domain: salary.com

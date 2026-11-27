@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ vendor.name }} — Vendor Centre</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <style>
+    .vendor-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: var(--space-3);
+    }
+    .vendor-priority { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+    .vendor-priority label { color: var(--text-muted); }
+
+    .kb-tabs { display: flex; gap: var(--space-2); margin: var(--space-2) 0 var(--space-4); }
+    .kb-tab {
+      font-size: var(--text-sm); font-weight: var(--weight-medium);
+      color: var(--text-muted); background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius-pill);
+      padding: 0.4rem 0.9rem; cursor: pointer;
+    }
+    .kb-tab b { font-variant-numeric: tabular-nums; }
+    .kb-tab:hover { color: var(--text); }
+    .kb-tab--active { background: var(--brand-soft); color: var(--brand); border-color: var(--brand); }
+    .kb-panel { display: none; }
+    .kb-panel--active { display: block; }
+
+    .edit-form {
+      display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3);
+      align-items: flex-end; padding: var(--space-3); margin-top: var(--space-2);
+      background: var(--surface-2); border-radius: var(--radius-md);
+    }
+    /* The course add-form has the most fields (4 + button) and was wrapping
+       the button onto a second row. Keep it on one line: don't wrap, and let
+       the growable fields shrink (min-width:0 overrides their flex-basis
+       floor). Falls back to normal wrapping on narrow screens. */
+    .edit-form--nowrap { flex-wrap: nowrap; }
+    .edit-form--nowrap .edit-form__field { min-width: 0; }
+    @media (max-width: 720px) {
+      .edit-form--nowrap { flex-wrap: wrap; }
+    }
+    /* Same fix as .edit-grid below: .input/.btn default to --text-base,
+       visibly larger than the table row's --text-sm above it. Explicit
+       height too — a <button> and an <input>/<select> can share identical
+       padding and font-size and STILL render at different heights, because
+       .btn sets line-height:1 while form controls fall back to the
+       browser's own default line-height. Forcing the same height sidesteps
+       that mismatch entirely rather than chasing line-height numbers. */
+    .edit-form .input, .edit-form .btn { font-size: var(--text-sm); height: 2.3rem; box-sizing: border-box; }
+    /* Certification edit row — a real grid, spanning the same width as the
+       table row above it (no max-width box floating inside a full-width
+       cell), with proportional (fr-based) columns so every field is sized
+       by the same rule rather than a grab-bag of arbitrary pixel widths.
+       All fields also share the .input class (see below) so they're the
+       same height/font/padding — mixing .input with the much smaller
+       .data-table__select was the actual cause of the "different sizes"
+       look, not just the column widths. */
+    .edit-grid {
+      display: grid; gap: var(--space-3);
+      grid-template-columns: 1fr 1fr 1.2fr 2fr auto;
+      align-items: end; padding: var(--space-3);
+      background: var(--surface-2); border-radius: var(--radius-md);
+    }
+    /* Match the table row's own type scale (--text-sm) — .input/.btn
+       default to --text-base, which read visibly larger than the row
+       above once actually compared side by side. Explicit height for the
+       same reason as .edit-form above: .btn's line-height:1 vs a form
+       control's browser-default line-height means matching padding alone
+       doesn't guarantee matching height. */
+    .edit-grid .input, .edit-grid .btn { width: 100%; font-size: var(--text-sm); height: 2.3rem; box-sizing: border-box; }
+    .edit-grid__notes { min-width: 0; }
+    .edit-grid .edit-grid__save { justify-self: start; width: auto; }
+    @media (max-width: 860px) {
+      .edit-grid { grid-template-columns: 1fr 1fr; }
+      .edit-grid__notes, .edit-grid__save { grid-column: 1 / -1; }
+    }
+    .edit-form__field { display: flex; flex-direction: column; gap: 3px; }
+    .edit-form__field label {
+      font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em;
+      color: var(--text-subtle); font-weight: var(--weight-semibold);
+    }
+    .course-url {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: var(--text-sm); max-width: 260px;
+    }
+    .course-url span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">{{ vendor.name }}</div>
+        <div class="app-header__subtitle">Vendor Knowledge Base</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      <div class="breadcrumb"><a href="{{ url_for('admin.vendor_list') }}">Vendor Centre</a> / {{ vendor.name }}</div>
+
+      {% include "_flashes.html" %}
+
+      <details class="help">
+        <summary>What each tab does</summary>
+        <div class="help__body">
+          <dl>
+            <dt>Priority</dt><dd>P1-P5 commercial priority enables generation and publishing. Research only keeps the vendor available as a factual source while blocking new commercial content.</dd>
+            <dt>Products</dt><dd>The vendor's product line and lifecycle status (current / legacy / end-of-life). Context the writer can draw on.</dd>
+            <dt>Certifications</dt><dd>Current or retired. <b>Marking one retired makes it a QA tripwire</b>: any article treating it as current gets a warning. Retirement year, replacement, and custom notes are all used in that warning.</dd>
+            <dt>Courses</dt><dd>Each belongs to a certification and needs a URL. Fed to the writer as real course names/durations and used for semantic entity coverage.</dd>
+          </dl>
+        </div>
+      </details>
+
+      <section class="card">
+        <div class="card__body vendor-toolbar">
+          <form class="vendor-priority" method="post" action="{{ url_for('admin.vendor_update', vendor_id=vendor.id) }}">
+            <label for="priority">Priority</label>
+            <select class="data-table__select" name="priority" id="priority">
+              <option value="" {{ 'selected' if not vendor.priority else '' }}>Research only</option>
+              {% for p in range(1, 6) %}
+                <option value="{{ p }}" {{ 'selected' if vendor.priority == p else '' }}>P{{ p }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn--sm btn--danger">Save</button>
+          </form>
+          <div class="text-muted" style="font-size:var(--text-xs)">
+            {{ products|length }} products · {{ certifications|length }} certifications · {{ courses|length }} courses
+          </div>
+        </div>
+      </section>
+
+      <div class="kb-tabs" role="tablist">
+        <button type="button" class="kb-tab kb-tab--active" data-tab="products">Products <b>({{ products|length }})</b></button>
+        <button type="button" class="kb-tab" data-tab="certifications">Certifications <b>({{ certifications|length }})</b></button>
+        <button type="button" class="kb-tab" data-tab="courses">Courses <b>({{ courses|length }})</b></button>
+      </div>
+
+      <!-- ---- products ---- -->
+      <section class="card kb-panel kb-panel--active" data-panel="products">
+        <div class="card__body">
+          {% if products %}
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {% for p in products %}
+              <tr>
+                <td><b>{{ p.name }}</b></td>
+                <td>
+                  <form class="data-table__inline-form" method="post" action="{{ url_for('admin.product_update_status', product_id=p.id) }}">
+                    <select class="data-table__select" name="status">
+                      {% for s in ['current', 'legacy', 'end_of_life'] %}
+                        <option value="{{ s }}" {{ 'selected' if p.status.value == s else '' }}>{{ s }}</option>
+                      {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn--sm btn--danger">Save</button>
+                  </form>
+                </td>
+                <td>
+                  <form method="post" action="{{ url_for('admin.product_delete', product_id=p.id) }}">
+                    <button type="submit" class="btn btn--sm btn--primary">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="placeholder">
+            <div class="placeholder__icon">&#128230;</div>
+            <div class="placeholder__title">No products yet</div>
+          </div>
+          {% endif %}
+          <form class="edit-form" method="post" action="{{ url_for('admin.product_create', vendor_id=vendor.id) }}">
+            <div class="edit-form__field" style="flex:1 1 220px">
+              <label>Name</label>
+              <input class="input" type="text" name="name" placeholder="Product name" required>
+            </div>
+            <div class="edit-form__field">
+              <label>Status</label>
+              <select class="input" name="status">
+                <option value="current">current</option>
+                <option value="legacy">legacy</option>
+                <option value="end_of_life">end_of_life</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn--danger">Add product</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ---- certifications ---- -->
+      <section class="card kb-panel" data-panel="certifications">
+        <div class="card__body">
+          {% if certifications %}
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Exam code</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {% for c in certifications %}
+              <tr>
+                <td><b>{{ c.name }}</b></td>
+                <td class="data-table__muted">{{ c.exam_code or '—' }}</td>
+                <td>
+                  {% if c.status.value == 'current' %}
+                    <span class="badge badge--pass">current</span>
+                  {% else %}
+                    <span class="badge badge--warn">retired{{ ' ' ~ c.retired_year if c.retired_year else '' }}</span>
+                  {% endif %}
+                  {% if not c.is_credential %}
+                    <span class="badge badge--warn" title="This row is a training course, not a credential: its only course carries the same name and no exam version is recorded. The Topic Engine will not propose certification guides about it. Give it a real credential name and exam version to change that.">course, not a credential</span>
+                  {% endif %}
+                </td>
+                <td class="cluster" style="justify-content:flex-end">
+                  <button type="button" class="btn btn--sm cert-edit-toggle" data-cert="{{ c.id }}">Edit</button>
+                  <form method="post" action="{{ url_for('admin.certification_delete', cert_id=c.id) }}">
+                    <button type="submit" class="btn btn--sm btn--primary">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              <tr class="cert-edit-row" data-cert-row="{{ c.id }}" style="display:none">
+                <td colspan="4" style="padding-top:0">
+                  <form class="edit-grid" method="post" action="{{ url_for('admin.certification_update_status', cert_id=c.id) }}">
+                    <div class="edit-form__field">
+                      <label>Status</label>
+                      <select class="input" name="status">
+                        <option value="current" {{ 'selected' if c.status.value == 'current' else '' }}>current</option>
+                        <option value="retired" {{ 'selected' if c.status.value == 'retired' else '' }}>retired</option>
+                      </select>
+                    </div>
+                    <div class="edit-form__field">
+                      <label>Retired year</label>
+                      <input class="input" type="number" name="retired_year" placeholder="year" value="{{ c.retired_year or '' }}">
+                    </div>
+                    <div class="edit-form__field">
+                      <label>Replaced by</label>
+                      <select class="input" name="replaced_by_id">
+                        <option value="">— none —</option>
+                        {% for other in certifications if other.id != c.id %}
+                          <option value="{{ other.id }}" {{ 'selected' if c.replaced_by_id == other.id else '' }}>{{ other.name }}</option>
+                        {% endfor %}
+                      </select>
+                    </div>
+                    <div class="edit-form__field edit-grid__notes">
+                      <label>Notes (custom warning text)</label>
+                      <input class="input" type="text" name="notes" placeholder="optional" value="{{ c.notes or '' }}">
+                    </div>
+                    <button type="submit" class="btn btn--danger edit-grid__save">Save</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="placeholder">
+            <div class="placeholder__icon">&#127891;</div>
+            <div class="placeholder__title">No certifications yet</div>
+          </div>
+          {% endif %}
+          <form class="edit-form" method="post" action="{{ url_for('admin.certification_create', vendor_id=vendor.id) }}">
+            <div class="edit-form__field" style="flex:1 1 220px">
+              <label>Name</label>
+              <input class="input" type="text" name="name" placeholder="Certification name" required>
+            </div>
+            <div class="edit-form__field">
+              <label>Exam code</label>
+              <input class="input" type="text" name="exam_code" placeholder="optional">
+            </div>
+            <div class="edit-form__field">
+              <label>Status</label>
+              <select class="input" name="status">
+                <option value="current">current</option>
+                <option value="retired">retired</option>
+              </select>
+            </div>
+            <div class="edit-form__field">
+              <label>Retired year</label>
+              <input class="input" type="number" name="retired_year" placeholder="optional" style="width:100px">
+            </div>
+            <button type="submit" class="btn btn--danger">Add certification</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ---- courses ---- -->
+      <section class="card kb-panel" data-panel="courses">
+        <div class="card__body">
+          {% if courses %}
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Certification</th><th>Duration</th><th>URL</th><th></th></tr></thead>
+            <tbody>
+              {% for course in courses %}
+              <tr>
+                <td><b>{{ course.name }}</b></td>
+                <td>{{ course.certification.name }}</td>
+                <td class="data-table__muted">{{ course.duration or '—' }}</td>
+                <td>
+                  <a class="course-url" href="{{ course.url }}" target="_blank" rel="noopener" title="{{ course.url }}">
+                    <span>{{ course.url }}</span> &#8599;
+                  </a>
+                </td>
+                <td>
+                  <form method="post" action="{{ url_for('admin.course_delete', course_id=course.id) }}">
+                    <button type="submit" class="btn btn--sm btn--primary">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          {% else %}
+          <div class="placeholder">
+            <div class="placeholder__icon">&#127916;</div>
+            <div class="placeholder__title">No courses yet</div>
+          </div>
+          {% endif %}
+
+          {% if certifications %}
+          <form class="edit-form edit-form--nowrap" method="post" action="{{ url_for('admin.course_create', vendor_id=vendor.id) }}">
+            <div class="edit-form__field">
+              <label>Certification</label>
+              <select class="input" name="certification_id" required>
+                {% for c in certifications %}
+                  <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="edit-form__field" style="flex:1 1 200px">
+              <label>Name</label>
+              <input class="input" type="text" name="name" placeholder="Course name" required>
+            </div>
+            <div class="edit-form__field">
+              <label>Duration</label>
+              <input class="input" type="text" name="duration" placeholder="optional" style="width:120px">
+            </div>
+            <div class="edit-form__field" style="flex:1 1 220px">
+              <label>URL</label>
+              <input class="input" type="text" name="url" placeholder="Course URL" required>
+            </div>
+            <button type="submit" class="btn btn--danger">Add course</button>
+          </form>
+          {% else %}
+          <div class="banner banner--info" style="margin-top: var(--space-4)">Add a certification first — a course must belong to one.</div>
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const tabs = document.querySelectorAll('.kb-tab');
+    const panels = document.querySelectorAll('.kb-panel');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('kb-tab--active'));
+        panels.forEach(p => p.classList.remove('kb-panel--active'));
+        tab.classList.add('kb-tab--active');
+        document.querySelector(`.kb-panel[data-panel="${tab.dataset.tab}"]`).classList.add('kb-panel--active');
+      });
+    });
+
+    document.querySelectorAll('.cert-edit-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = document.querySelector(`.cert-edit-row[data-cert-row="${btn.dataset.cert}"]`);
+        const open = row.style.display !== 'none';
+        row.style.display = open ? 'none' : 'table-row';
+        btn.textContent = open ? 'Edit' : 'Close';
+      });
+    });
+  </script>
+  {% include "_usage_modal.html" %}
+</body>
+</html>

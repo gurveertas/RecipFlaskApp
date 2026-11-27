@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ article.title }} &mdash; Article Studio</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  {% from "_review.html" import review_panels, review_script %}
+  {% from "studio/_stepper.html" import stepper %}
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">{{ article.title }}</div>
+        <div class="app-header__subtitle">Article Studio &middot; Article &middot; {{ article.vendor.name }}</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {{ stepper('article', vendor_id=article.vendor_id, article_id=article.id) }}
+
+      {% include "_flashes.html" %}
+
+      <details class="help">
+        <summary>How to read this page — QA verdict & rewrites</summary>
+        <div class="help__body">
+          <p><b>Publish candidate</b> = zero failed checks. <b>Blocked</b> = at least one FAIL — the detail line names the exact problem (a hallucinated figure, a copied phrase, a missing keyword). WARNs never block; they're for your judgement.</p>
+          <dl>
+            <dt>References</dt><dd>The [S#] sources the article actually cites — real pages found during research.</dd>
+            <dt>Fix selected</dt><dd>Tick the specific checks you want fixed and leave the rest. Aimed at just those, grounded in this article's own sources. Blocking issues (FAIL / mandatory) are pre-ticked; WARNs and advisories are not, since those are often a deliberate call. Use this first.<br><small>Anything not ticked is kept as written, and that is structural rather than a request: the draft is sent as numbered paragraphs and the AI returns a list of edits, so a paragraph it does not name is not rewritten &mdash; it is not in the response at all. Of the edits it does make, any that breaks a check which was passing is dropped. What cannot be dropped without undoing the fix is retried, and the whole attempt is discarded if it would leave the article unpublishable. A pass costs 1 AI call normally, up to 3 when a fix and a regression sit in the same sentences &mdash; the message afterwards says when that happened.</small></dd>
+            <dt>Rewrite one section</dt><dd>Pick an H2, optionally give an instruction (&ldquo;add the exam cost&rdquo;, &ldquo;link to &lt;url&gt;&rdquo;). One LLM call, ~10s, citations kept, QA re-runs. For edits no check has flagged.</dd>
+            <dt>Rewrite whole article</dt><dd>Full research + write + QA cycle (1-3 min). For structural problems, not small fixes.</dd>
+            <dt>REACS</dt><dd>A second, separate content-standard gate (mandatory + advisory "pillars", score &ge;{{ REACS_THRESHOLD }}) &mdash; see the panel below. Publishing needs QA <i>and</i> REACS to pass.</dd>
+            <dt>Continue to Preview</dt><dd>Appears only when both QA and REACS pass. Preview shows the article in the live site's formatting before publishing.</dd>
+          </dl>
+          <p style="margin-top:var(--space-3)">What each QA check verifies: see the <a href="{{ url_for('guide') }}">Guide</a>.</p>
+        </div>
+      </details>
+
+      {% set reacs_ready = article.reacs_score is not none and article.reacs_score >= 0 %}
+      {% set publish_ready = article.qa_passed and reacs_ready and article.reacs_passed %}
+
+      {{ review_panels(article, url_for('studio.fix_issues_step', article_id=article.id),
+                       reacs_ready, publish_ready,
+                       rescore_url=url_for('studio.rescore_step', article_id=article.id),
+                       unfixable=unfixable) }}
+
+      <section class="card">
+        <div class="card__body">
+          <div class="meta">
+            <span class="meta__item"><b>{{ article.word_count }}</b> words</span>
+            <span class="meta__item"><b>Meta title:</b> {{ article.meta_title|length }} chars</span>
+            <span class="meta__item"><b>Meta description:</b> {{ article.meta_description|length }} chars</span>
+          </div>
+          <p class="text-muted" style="margin-top:var(--space-2);font-size:var(--text-sm)">{{ article.meta_description }}</p>
+          <div class="article" style="margin-top:var(--space-4)">{{ content_html|safe }}</div>
+          {% if article.byline_instructor and article.byline_instructor.name %}
+          <p class="text-muted" style="margin-top:var(--space-3);font-size:var(--text-sm);font-style:italic">
+            Technically reviewed by {{ article.byline_instructor.name }}, {{ article.byline_instructor.credentials }}
+          </p>
+          {% endif %}
+
+          {# The CTA is already the last paragraph of the rendered body above —
+             the model returns it both inline and in a separate `cta` field, so
+             a standalone panel here just showed it twice. The body is what gets
+             published, so we display it once, in place. #}
+
+          {% if article.references %}
+          <div class="section-label" style="margin-top:var(--space-4)">References</div>
+          <ul class="reflist">
+            {% for r in article.references %}
+              <li><span class="reflist__tag">[{{ r.tag }}]</span>
+                <a href="{{ r.url }}" target="_blank" rel="noopener">{{ r.title or r.url }}</a></li>
+            {% endfor %}
+          </ul>
+          {% endif %}
+
+          {# The manual escape hatch. Everything else on this page asks a
+             model to change the article; this is the one control that lets
+             the person reading the finding just fix it. Collapsed by default
+             because this page exists to show the verdict, and an open
+             full-height textarea would push it off the screen. #}
+          <details id="edit" class="help help--tool" style="margin-top:var(--space-5)">
+            <summary>Edit the article yourself</summary>
+            <div class="help__body">
+              <p>For when the automated fixes can't do it. What you type is saved exactly as typed &mdash;
+                no AI call, no search credits &mdash; and both gates are re-scored immediately, so the
+                panels above always describe the text that is actually here.</p>
+              <p>Keep each <code>[S#]</code> marker on the sentence it supports:
+                <code>citation_integrity</code> fails on a marker with no matching reference. Deleting a
+                sentence that carried the only marker for a source is fine.</p>
+              {% if article.wp_post_id %}
+                <p><b>This article already has a draft in WordPress.</b> Saving here changes only the copy
+                  in this tool. Edit the WordPress draft yourself, or delete it there so this article can
+                  be pushed again.</p>
+              {% endif %}
+              <form method="post" action="{{ url_for('studio.edit_step', article_id=article.id) }}">
+                <div class="brief-field">
+                  <label for="edit-title">Title</label>
+                  <input class="input" id="edit-title" type="text" name="title"
+                         maxlength="120" value="{{ article.title }}">
+                </div>
+                <div class="brief-field">
+                  <label for="edit-meta-title">Meta title</label>
+                  <input class="input" id="edit-meta-title" type="text" name="meta_title"
+                         value="{{ article.meta_title }}">
+                  <div class="field__hint">{{ article.meta_title|length }} characters &middot;
+                    Rank Math wants the keyword near the start, and Google cuts around 60.</div>
+                </div>
+                <div class="brief-field">
+                  <label for="edit-meta-description">Meta description</label>
+                  <textarea class="input" id="edit-meta-description" name="meta_description"
+                            rows="2">{{ article.meta_description }}</textarea>
+                  <div class="field__hint">{{ article.meta_description|length }} characters.</div>
+                </div>
+                <div class="brief-field">
+                  <label for="edit-content">Body (markdown)</label>
+                  <textarea class="input" id="edit-content" name="content" rows="26" spellcheck="true"
+                            style="font-family:var(--font-mono);font-size:var(--text-sm);line-height:1.6"
+                            >{{ article.content }}</textarea>
+                  <div class="field__hint">The &ldquo;Last updated&rdquo; line is rewritten to today
+                    whenever the body changes, the same as after any AI edit.</div>
+                </div>
+                <div class="brief-field">
+                  <label>FAQ</label>
+                  <div class="field__hint" style="margin-bottom:var(--space-2)">REACS needs eight
+                    questions with written answers. Clear both boxes of a pair to drop it; the empty
+                    pairs at the end add new ones.</div>
+                  {% for f in (article.faq or []) + [{}, {}] %}
+                    <div class="cluster" style="align-items:flex-start;margin-bottom:var(--space-2)">
+                      <input class="input" type="text" name="faq_question" placeholder="Question"
+                             style="flex:1;min-width:220px" value="{{ f.question or f.q or '' }}">
+                      <textarea class="input" name="faq_answer" rows="2" placeholder="Answer"
+                                style="flex:2;min-width:260px">{{ f.answer or f.a or '' }}</textarea>
+                    </div>
+                  {% endfor %}
+                </div>
+                <div class="cluster">
+                  <button type="submit" class="btn btn--primary">Save changes</button>
+                  <span class="text-muted" style="font-size:var(--text-sm)">Free and instant. Both gates
+                    re-score on save.</span>
+                </div>
+              </form>
+            </div>
+          </details>
+
+          {% if headings %}
+          {# Targeted fix: one LLM call rewrites one section (grounded in the
+             article's own cited sources, full QA re-run) — far cheaper than
+             the full Rewrite below, which re-researches and regenerates
+             everything. #}
+          <div class="section-label" style="margin-top:var(--space-5)">Rewrite one section</div>
+          <form method="post" action="{{ url_for('studio.rewrite_section_step', article_id=article.id) }}"
+                data-busy="Rewriting the section — grounded in the article's own sources, then full QA"
+                data-busy-hint="Usually 10–30 seconds"
+                class="cluster" style="margin-top:var(--space-2);align-items:stretch">
+            <select class="input" name="heading" style="max-width:280px">
+              {% for h in headings %}<option value="{{ h }}">{{ h }}</option>{% endfor %}
+            </select>
+            <input class="input" type="text" name="instruction" style="flex:1;min-width:200px"
+                   placeholder="Optional guidance, e.g. more technical depth, add the exam cost">
+            <button type="submit" class="btn">Rewrite section</button>
+          </form>
+          {% endif %}
+
+          {# Proofread: the ONE model-judged check here, kept off the automatic
+             path on purpose. It costs a real LLM call, it can never block
+             publishing, and it is advisory — so it runs when someone asks for
+             it, not on every write. #}
+          <div id="prose-review" class="section-label" style="margin-top:var(--space-5)">Proofread</div>
+          <div class="proofread">
+            {# The action and its result share one line — the button alone said
+               nothing about whether it had ever been run, and a status stacked
+               under it read as a third unrelated row. The explanation sits
+               below both, on its own full line, so it never wraps mid-phrase
+               against the button. #}
+            <div class="proofread__row">
+              <form method="post" action="{{ url_for('studio.prose_review_step', article_id=article.id) }}"
+                    data-busy="Proofreading the article body"
+                    data-busy-hint="One AI call, usually 5–15 seconds">
+                <button type="submit" class="btn">
+                  {{ "Proofread again" if article.prose_reviewed_at else "Proofread the body" }}
+                </button>
+              </form>
+              {% if article.prose_reviewed_at %}
+                {% if article.prose_review %}
+                  <span class="badge badge--warn">{{ article.prose_review|length }} to review</span>
+                {% else %}
+                  <span class="badge badge--pass">Clean</span>
+                {% endif %}
+                <span class="proofread__status">
+                  {%- if article.prose_review %}Suggestions below{% else %}No language issues found{% endif %}
+                  &middot; checked {{ article.prose_reviewed_at | ago }}
+                </span>
+              {% else %}
+                {# Explained only until it has been run once. Kept permanently,
+                   the sentence became fixed chrome for a one-time
+                   explanation — and sitting directly above "Rewrite whole
+                   article" it read as though it described those buttons
+                   rather than this one. #}
+                <span class="proofread__status">
+                  Grammar, spelling and register, checked by AI &middot; advisory, never blocks publishing
+                </span>
+              {% endif %}
+            </div>
+
+            {% if article.prose_review %}
+              {# Same "tick what you want, then act" shape as the QA panel, so
+                 the two review surfaces behave alike. Applying is an exact
+                 replace of the quoted text — no model call — which is why it
+                 can be offered per suggestion rather than as one all-or-
+                 nothing rewrite. #}
+              <form method="post" class="js-prose-apply"
+                    action="{{ url_for('studio.prose_apply_step', article_id=article.id) }}">
+                <ul class="checklist proofread__list">
+                  {% for issue in article.prose_review %}
+                    {# Applicable only if the quoted text is STILL in the body.
+                       Checked on every render rather than trusting a flag set
+                       by a previous apply: the article can be edited by hand
+                       between the proofread and now, and offering a fix whose
+                       anchor has vanished sets up a failure the editor cannot
+                       see coming. #}
+                    {% set found = issue.quote and issue.quote in article.content %}
+                    {% if issue.suggestion and found %}
+                      <label class="check check--pick is-picked" data-state="soft">
+                        <input type="checkbox" class="check__box" name="fix"
+                               value="{{ loop.index0 }}" checked>
+                        <span class="badge badge--warn check__badge">{{ issue.kind }}</span>
+                        <div>
+                          <div class="check__name">{{ issue.problem }}</div>
+                          <div class="proofread__diff">
+                            <s>{{ issue.quote }}</s>
+                            <span class="proofread__arrow">&rarr;</span><b>{{ issue.suggestion }}</b>
+                          </div>
+                        </div>
+                      </label>
+                    {% else %}
+                      {# No suggestion to apply, or the quoted text has since
+                         changed. Shown, not hidden: the finding was true when
+                         it was made and the editor should see it was not
+                         silently dropped. #}
+                      <div class="check" data-state="soft">
+                        <span aria-hidden="true"></span>
+                        <span class="badge badge--warn check__badge">{{ issue.kind }}</span>
+                        <div>
+                          <div class="check__name">{{ issue.problem }}
+                            <span class="check__lock">
+                              {{ "no automatic fix" if not issue.suggestion
+                                 else "text has changed — proofread again" }}</span></div>
+                          <div class="proofread__diff"><s>{{ issue.quote }}</s></div>
+                        </div>
+                      </div>
+                    {% endif %}
+                  {% endfor %}
+                </ul>
+
+                <p class="proofread__note">
+                  Applying edits the article text directly &mdash; exact replacements, no AI
+                  call, so nothing else in the sentence moves. Both gates are re-scored
+                  afterwards. AI can be wrong about vendor terminology: check any change to
+                  a product or certification name against the Vendor Centre before applying.
+                </p>
+
+                <div class="cluster" style="margin-top:var(--space-3)">
+                  <button type="submit" class="btn btn--primary btn--sm"
+                          data-apply-btn>Apply selected</button>
+                  <button type="button" class="btn btn--sm" data-toggle-all>Clear all</button>
+                  <span class="proofread__status" data-apply-count></span>
+                </div>
+              </form>
+            {% endif %}
+          </div>
+
+          <div class="cluster" style="margin-top:var(--space-5)">
+            <form method="post" action="{{ url_for('studio.write_step', article_id=article.id) }}"
+                  data-busy="Rewriting the whole article — live research, drafting, full QA"
+                  data-busy-hint="Can take 1–3 minutes (up to 3 attempts with targeted QA fixes)">
+              <button type="submit" class="btn">Rewrite whole article</button>
+            </form>
+            <a class="btn" href="{{ url_for('studio.article_pdf', article_id=article.id) }}"
+               title="The article in the site's formatting, its numbered references, and a quality report covering both gates. Available at any stage, findings or not.">Download PDF</a>
+            {% if publish_ready %}
+              <a class="btn btn--primary" href="{{ url_for('studio.preview_step', article_id=article.id) }}">Continue to Preview</a>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    // Keeps the button honest about what it will do. Without a live count the
+    // primary action says "Apply selected" while nothing is selected, which
+    // reads as broken when clicking it comes back with an error.
+    (function () {
+      var form = document.querySelector("form.js-prose-apply");
+      if (!form) return;
+      var boxes = Array.prototype.slice.call(
+        form.querySelectorAll("input[name=fix]"));
+      var btn = form.querySelector("[data-apply-btn]");
+      var toggle = form.querySelector("[data-toggle-all]");
+      var count = form.querySelector("[data-apply-count]");
+      function sync() {
+        var n = boxes.filter(function (b) { return b.checked; }).length;
+        btn.disabled = n === 0;
+        btn.textContent = n === 1 ? "Apply 1 correction"
+                                  : "Apply " + n + " corrections";
+        toggle.textContent = n === boxes.length ? "Clear all" : "Select all";
+        count.textContent = n === 0 ? "Nothing selected" : "";
+      }
+      boxes.forEach(function (b) { b.addEventListener("change", sync); });
+      toggle.addEventListener("click", function () {
+        var target = boxes.some(function (b) { return !b.checked; });
+        boxes.forEach(function (b) { b.checked = target; });
+        sync();
+      });
+      sync();
+    })();
+  </script>
+  {% include "_usage_modal.html" %}
+  {% include "_busy.html" %}
+  {{ review_script() }}
+</body>
+</html>

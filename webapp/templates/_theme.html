@@ -1,0 +1,14 @@
+{# Shared theme toggle — include as the last item inside .app-header.
+   The saved choice is applied before first paint by the small head script
+   every page already has (localStorage "theme" -> data-theme attribute);
+   this button just flips and persists it. #}
+<button type="button" class="icon-btn" id="themeToggle" title="Toggle light / dark" aria-label="Toggle theme">◐</button>
+<script>
+  document.getElementById("themeToggle").addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme")
+      || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    var next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+  });
+</script>

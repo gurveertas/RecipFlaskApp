@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Preview &mdash; Article Studio</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/preview.css') }}">
+  {# The live site's two faces. Loaded from Google Fonts because Bebas Neue is
+     CONDENSED — without it, headline wrap points are wrong and the preview
+     misleads. If the machine is offline the link simply fails and the stack
+     falls back; the notice below reports which happened rather than letting a
+     substituted font pass for the real thing. #}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto:wght@400;600;700&display=swap">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  {% from "studio/_stepper.html" import stepper %}
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">{{ article.title }}</div>
+        <div class="app-header__subtitle">Article Studio &middot; Preview</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {{ stepper('preview', vendor_id=article.vendor_id, article_id=article.id) }}
+
+      <details class="help">
+        <summary>How to read this page &mdash; what the preview does and doesn't show</summary>
+        <div class="help__body">
+          <dl>
+            <dt>What this is</dt>
+            <dd>The article rendered with rededucation.com's own article
+              formatting. The type sizes, colours, table styling and FAQ
+              accordion were measured from a live published post, not
+              approximated by eye.</dd>
+            <dt>Width buttons</dt>
+            <dd>The text column narrows exactly as the live one does, so a wide
+              comparison table that overflows on a phone overflows here too.</dd>
+            <dt>What it can't show</dt>
+            <dd>Site header, footer, sidebar, related-posts strip and hero
+              image &mdash; those come from the WordPress theme at publish
+              time. Nothing on this page is saved or sent anywhere.</dd>
+          </dl>
+        </div>
+      </details>
+
+      <div class="preview-bar">
+        <div class="preview-widths" role="group" aria-label="Preview width">
+          <button type="button" class="filter-tab filter-tab--active" data-w="desktop">Desktop</button>
+          <button type="button" class="filter-tab" data-w="tablet">Tablet</button>
+          <button type="button" class="filter-tab" data-w="mobile">Mobile</button>
+        </div>
+        <span class="preview-note">
+          {%- if "sp-faq" not in preview_html %}
+            No FAQ heading found &mdash; the site groups FAQs into an accordion
+            under a &ldquo;Frequently Asked Questions&rdquo; heading.
+          {%- endif %}
+          <span id="fontNote"></span>
+        </span>
+      </div>
+
+      <div class="sitepreview" id="sitePreview">
+        <div class="sitepreview__col">
+          <h1>{{ article.title }}</h1>
+          {% if byline %}
+            <p class="sp-byline">Technically reviewed by {{ byline }}</p>
+          {% endif %}
+          {{ preview_html|safe }}
+        </div>
+      </div>
+
+      <div class="review-bar">
+        <span class="review-bar__count">
+          {{ article.word_count }} words &middot; QA {{ article.qa_score }} &middot; REACS {{ article.reacs_score }}
+        </span>
+        <div class="review-bar__actions">
+          <a class="btn btn--sm btn--ghost"
+             href="{{ url_for('studio.article_step', article_id=article.id) }}">Back to Article</a>
+          <a class="btn btn--sm btn--primary"
+             href="{{ url_for('studio.publish_step', article_id=article.id) }}">Continue to Publish</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  {% include "_usage_modal.html" %}
+  <script>
+    (function () {
+      var pane = document.getElementById("sitePreview");
+      document.querySelectorAll("[data-w]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          document.querySelectorAll("[data-w]").forEach(function (o) {
+            o.classList.toggle("filter-tab--active", o === b);
+          });
+          pane.classList.remove("sitepreview--mobile", "sitepreview--tablet");
+          var w = b.getAttribute("data-w");
+          if (w !== "desktop") pane.classList.add("sitepreview--" + w);
+        });
+      });
+
+      // Say plainly whether the real site face loaded. A silently substituted
+      // font changes every headline wrap point, which is exactly the kind of
+      // thing a preview is supposed to be trusted about.
+      var note = document.getElementById("fontNote");
+      function report(ok) {
+        note.textContent = ok
+          ? "Site fonts loaded (Bebas Neue / Roboto)"
+          : "Offline — site fonts unavailable, headings use a fallback face; wrap points may differ";
+      }
+      if (document.fonts && document.fonts.check) {
+        document.fonts.ready.then(function () {
+          report(document.fonts.check('16px "Bebas Neue"'));
+        });
+      } else { report(true); }
+    })();
+  </script>
+</body>
+</html>

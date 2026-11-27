@@ -1,0 +1,22 @@
+# -----------------------------------------------------------------------------
+# Vendor -> course/landing page path on rededucation.com, used to insert inline
+# course links in generated drafts (matching your existing internal-linking
+# pattern). CONFIRM these paths against your live site before publishing —
+# they're best guesses from the site structure and are easy to correct here.
+# -----------------------------------------------------------------------------
+base_url: "https://www.rededucation.com"
+
+vendors:
+  Palo Alto Networks: "/palo-alto-networks/"
+  Check Point: "/check-point/"
+  F5: "/f5-networks/"
+  Nutanix: "/nutanix/"
+  Avaya: "/avaya/"
+
+# Call-to-action phrases the generator may use (the validator checks at least
+# one appears). Edit to match your brand voice.
+cta_phrases:
+  - "Advance your career with Red Education"
+  - "Explore our courses"
+  - "Join over 100,000 learners"
+  - "Learn real-world skills with Red Education"

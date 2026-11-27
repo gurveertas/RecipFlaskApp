@@ -1,0 +1,76 @@
+/* ============================================================================
+   base.css — reset + base element defaults
+   ----------------------------------------------------------------------------
+   Element-level (tag) styling only. Reusable component *classes* live in
+   components.css; page structure lives in layout.css.
+   ============================================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
+
+/* Headings are set tight and heavy — the single biggest cue of the reference
+   layout. Sizes come from the token scale so one change retunes them all. */
+h1, h2, h3, h4 {
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-bold);
+  color: var(--text);
+}
+h1 { font-size: var(--text-2xl); font-weight: var(--weight-black); }
+h2 { font-size: var(--text-xl); }
+h3 { font-size: var(--text-lg); }
+h4 { font-size: var(--text-md); }
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+button { font-family: inherit; }
+
+img { max-width: 100%; display: block; }
+
+::selection { background: color-mix(in srgb, var(--brand) 25%, transparent); }
+
+/* Accessible focus: visible ring only for keyboard users */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--radius-sm);
+}
+
+/* Thin, theme-aware scrollbars for scrollable panels */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar { height: 10px; width: 10px; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

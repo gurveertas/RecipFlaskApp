@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<title>{{ article.title }}</title>
+<style>
+  /* Self-contained on purpose — see webapp/pdf.py. No webfonts, no /static:
+     Chrome renders this from a file:// URL and a font request that times out
+     would silently change the layout of a document meant to be sent on. */
+  @page { size: A4; margin: 20mm 18mm 22mm; }
+  html { font-size: 11pt; }
+  body {
+    font-family: Georgia, "Times New Roman", serif;
+    color: #1a1a1a; line-height: 1.55; margin: 0;
+  }
+  h1 { font-size: 20pt; line-height: 1.25; margin: 0 0 6pt; }
+  h2 { font-size: 14pt; margin: 20pt 0 6pt; page-break-after: avoid; }
+  h3 { font-size: 12pt; margin: 14pt 0 4pt; page-break-after: avoid; }
+  h2, h3 { font-family: Helvetica, Arial, sans-serif; }
+  p, li { orphans: 3; widows: 3; }
+  a { color: #1a1a1a; text-decoration: none; }
+  .meta {
+    font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #555;
+    border-bottom: 1pt solid #ccc; padding-bottom: 8pt; margin-bottom: 16pt;
+  }
+  .meta span + span::before { content: " · "; }
+  table { border-collapse: collapse; width: 100%; margin: 10pt 0;
+          font-size: 10pt; page-break-inside: avoid; }
+  th, td { border: 0.5pt solid #bbb; padding: 5pt 7pt; text-align: left;
+           vertical-align: top; }
+  th { background: #f2f2f2; font-family: Helvetica, Arial, sans-serif; }
+  blockquote { margin: 10pt 0; padding-left: 10pt; border-left: 2pt solid #ddd;
+               color: #444; }
+  code { font-family: "Courier New", monospace; font-size: 10pt; }
+  /* References start a new page: the citation list is the half of this
+     document somebody checks separately from the prose. */
+  .references { page-break-before: always; }
+  .references h2 { margin-top: 0; }
+  .references ol { padding-left: 18pt; }
+  .references li { margin-bottom: 7pt; font-size: 10pt; }
+  .references .tag {
+    font-family: Helvetica, Arial, sans-serif; font-weight: bold;
+  }
+  .references .url { color: #444; word-break: break-all; font-size: 9pt; }
+  .none { color: #666; font-style: italic; }
+
+  /* The site preview's FAQ accordions. On a page a closed <details> is a
+     control; on paper it is a missing answer, so the route forces them open
+     and the marker is hidden because nothing here can be clicked. */
+  details { margin: 6pt 0; page-break-inside: avoid; }
+  details > summary { font-weight: bold; list-style: none; }
+  details > summary::-webkit-details-marker { display: none; }
+
+  /* Report section — sans-serif and tighter, so it reads as apparatus rather
+     than as more of the article. */
+  .report { page-break-before: always;
+            font-family: Helvetica, Arial, sans-serif; font-size: 9pt; }
+  .report h2, .report h3 { font-family: Helvetica, Arial, sans-serif; }
+  .report h3 { font-size: 10.5pt; margin: 14pt 0 5pt; }
+  .verdict { display: flex; gap: 14pt; margin: 8pt 0 14pt; }
+  .verdict div { border: 0.5pt solid #bbb; padding: 6pt 10pt; }
+  .verdict b { display: block; font-size: 15pt; }
+  .verdict small { color: #555; text-transform: uppercase;
+                   letter-spacing: 0.4pt; font-size: 7.5pt; }
+  .report table { font-size: 8.5pt; }
+  .report td.s { white-space: nowrap; font-weight: bold; width: 42pt; }
+  .s-pass { color: #1a7f37; }
+  .s-warn { color: #9a6700; }
+  .s-fail { color: #b42318; }
+  .params td:first-child { width: 110pt; color: #555; }
+</style>
+</head>
+<body>
+  <h1>{{ article.title }}</h1>
+  <div class="meta">
+    {% if article.vendor %}<span>{{ article.vendor.name }}</span>{% endif %}
+    {% if byline %}<span>Technically reviewed by {{ byline }}</span>{% endif %}
+    <span>{{ article.word_count }} words</span>
+    <span>{{ generated_on }}</span>
+  </div>
+
+  {# The body as written, [S#] markers intact. render_site_preview strips
+     them for the live-site view; here they are what makes the reference list
+     below mean anything. #}
+  {{ body_html|safe }}
+
+  <div class="references">
+    <h2>References</h2>
+    {% if references %}
+      <ol>
+        {% for r in references %}
+          <li>
+            <span class="tag">[{{ r.tag }}]</span>
+            {{ r.title or r.domain or r.url }}<br>
+            <span class="url">{{ r.url }}</span>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}
+      <p class="none">This article has no stored references.</p>
+    {% endif %}
+  </div>
+
+  {# Every check and every pillar, verbatim, with the same wording the Studio
+     panel shows. A reviewer who is sent the article should be able to see
+     what the gates said about it without being sent a screenshot too. #}
+  <div class="report">
+    <h2>Quality report</h2>
+    <div class="verdict">
+      <div>
+        <small>Reliability QA</small>
+        <b>{{ article.qa_score if article.qa_score >= 0 else '—' }}</b>
+        {{ 'passed' if article.qa_passed else 'not passed' }}
+      </div>
+      <div>
+        <small>REACS</small>
+        <b>{{ article.reacs_score if article.reacs_score >= 0 else '—' }}</b>
+        {{ 'passed' if article.reacs_passed else 'not passed' }}
+      </div>
+      <div>
+        <small>Status</small>
+        <b>{{ article.status.value }}</b>
+        {{ 'published' if article.published_at else ('in WordPress' if article.wp_post_id else 'not sent') }}
+      </div>
+    </div>
+
+    <h3>Reliability QA &mdash; {{ qa_checks|length }} checks</h3>
+    {% if qa_checks %}
+      <table>
+        <tr><th>Status</th><th>Check</th><th>Detail</th></tr>
+        {% for c in qa_checks %}
+          <tr>
+            <td class="s s-{{ c.status }}">{{ c.status|upper }}</td>
+            <td>{{ c.name }}</td>
+            <td>{{ c.detail }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}<p class="none">Not scored yet.</p>{% endif %}
+
+    <h3>REACS &mdash; {{ reacs_report|length }} pillars</h3>
+    {% if reacs_report %}
+      <table>
+        <tr><th>Result</th><th>Tier</th><th>Pillar</th><th>Message</th></tr>
+        {% for c in reacs_report %}
+          <tr>
+            <td class="s {{ 's-pass' if c.passed else ('s-fail' if c.tier == 'mandatory' else 's-warn') }}">
+              {{ 'PASS' if c.passed else 'FAIL' }}</td>
+            <td>{{ c.tier }}</td>
+            <td>{{ c.pillar }}</td>
+            <td>{{ c.message }}</td>
+          </tr>
+        {% endfor %}
+      </table>
+    {% else %}<p class="none">Not scored yet.</p>{% endif %}
+
+    <h3>Article parameters</h3>
+    <table class="params">
+      <tr><td>Vendor</td><td>{{ article.vendor.name if article.vendor else '—' }}</td></tr>
+      <tr><td>Topic</td><td>{{ topic.title if topic else '—' }}</td></tr>
+      <tr><td>Content type</td><td>{{ topic.content_type.value if topic and topic.content_type else '—' }}</td></tr>
+      <tr><td>Target keyword</td><td>{{ article.keyword or '—' }}</td></tr>
+      <tr><td>SEO title</td><td>{{ article.meta_title or '—' }}{% if article.meta_title %} ({{ article.meta_title|length }} chars){% endif %}</td></tr>
+      <tr><td>Meta description</td><td>{{ article.meta_description or '—' }}{% if article.meta_description %} ({{ article.meta_description|length }} chars){% endif %}</td></tr>
+      <tr><td>Excerpt</td><td>{{ article.excerpt or '—' }}</td></tr>
+      <tr><td>Call to action</td><td>{{ article.cta or '—' }}</td></tr>
+      <tr><td>Slug</td><td>{{ article.slug or '—' }}</td></tr>
+      <tr><td>Word count</td><td>{{ article.word_count }}</td></tr>
+      <tr><td>FAQ entries</td><td>{{ (article.faq or [])|length }}</td></tr>
+      <tr><td>Byline</td><td>{{ byline or '—' }}</td></tr>
+      <tr><td>Model</td><td>{{ article.model or '—' }}</td></tr>
+      <tr><td>Created</td><td>{{ article.created_at.strftime('%d %b %Y %H:%M') if article.created_at else '—' }}</td></tr>
+      <tr><td>Last updated</td><td>{{ article.updated_at.strftime('%d %b %Y %H:%M') if article.updated_at else '—' }}</td></tr>
+      {% if article.wp_link %}<tr><td>WordPress</td><td>{{ article.wp_link }}</td></tr>{% endif %}
+      {% if article.unresolved_fixes %}
+        <tr><td>Fixes not clearing</td><td>
+          {% for k, v in article.unresolved_fixes.items() %}{{ k }} ({{ v }}×){% if not loop.last %}, {% endif %}{% endfor %}
+        </td></tr>
+      {% endif %}
+    </table>
+  </div>
+</body>
+</html>

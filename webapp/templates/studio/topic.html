@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ vendor.name }} &mdash; Article Studio</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  {% from "studio/_stepper.html" import stepper %}
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">{{ vendor.name }}</div>
+        <div class="app-header__subtitle">Article Studio &middot; Topic</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {{ stepper('topic', vendor_id=vendor.id) }}
+
+      {% include "_flashes.html" %}
+
+      <details class="help">
+        <summary>How this step works — generating & choosing topics</summary>
+        <div class="help__body">
+          <p>The AI <i>proposes</i> ideas; a fixed scoring formula <i>decides</i> (commercial 40% &middot; SEO 25% &middot; AI-visibility 20% &middot; vendor fit 15%, minus ranking difficulty). Difficulty is <b>measured from the live Google top-10</b> for each keyword, not guessed.</p>
+          <dl>
+            <dt>ideas count</dt><dd>How many to generate per batch (each costs ~1 Serper credit for the SERP measurement).</dd>
+            <dt>theme</dt><dd>Optional steer for the whole batch, e.g. &ldquo;zero trust&rdquo; or &ldquo;career switchers&rdquo;.</dd>
+            <dt>score</dt><dd>The formula's 0-100 opportunity score. &ge;65 auto-approves as <b>create</b>; 45-64 is <b>parked</b>; below is <b>rejected</b>.</dd>
+            <dt>gap / overlap</dt><dd>Checked against real published rededucation.com posts. <b>gap</b> = uncovered ground. <b>overlap</b> = a similar post already exists (linked) — decide if a second is worth it.</dd>
+            <dt>Create brief</dt><dd>Runs live research for the topic and drafts a structured brief. Refuses if no verified sources are found — the writer never invents facts.</dd>
+          </dl>
+        </div>
+      </details>
+
+      {% if not vendor.priority %}
+      <div class="banner banner--info">
+        <b>{{ vendor.name }} is research-only.</b> Its primary sources and
+        historical coverage remain available, but new commercial topics,
+        briefs, articles and WordPress drafts are disabled.
+      </div>
+      {% else %}
+      <form class="card" method="post" action="{{ url_for('studio.generate_topics', vendor_id=vendor.id) }}"
+            data-busy="Generating topic ideas — AI proposal, then live SERP difficulty scoring"
+            data-busy-hint="Usually 15–40 seconds (each keyword's real top-10 is measured)">
+        <div class="card__body">
+          <div class="section-label">Generate more ideas</div>
+          <div class="searchbar__inner">
+            <div class="searchbar__field searchbar__field--compact">
+              <select class="input" name="count">
+                <option value="1">1 idea</option>
+                <option value="5">5 ideas</option>
+                <option value="10" selected>10 ideas</option>
+                <option value="15">15 ideas</option>
+              </select>
+            </div>
+            <div class="searchbar__field searchbar__field--grow">
+              <input class="input" type="text" name="theme" placeholder="Optional theme, e.g. zero trust">
+            </div>
+            <button type="submit" class="btn btn--primary">Generate</button>
+          </div>
+        </div>
+      </form>
+      {% endif %}
+
+      <section class="card">
+        <div class="card__body">
+          <div class="section-label">Topics ({{ rows|length }})</div>
+          {% if not rows %}
+            <div class="placeholder">
+              <div class="placeholder__icon">&#128161;</div>
+              <div class="placeholder__title">No topics yet</div>
+              <div>Generate your first batch above.</div>
+            </div>
+          {% endif %}
+          {% for row in rows %}
+          {% set t = row.topic %}
+          <div class="row" style="display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-4);padding:var(--space-3) 0;border-top:1px solid var(--border)">
+            <div style="min-width:0">
+              <div class="cluster">
+                <span class="badge badge--{{ 'pass' if t.priority.value == 'create' else 'warn' if t.priority.value == 'parked' else 'info' }}">
+                  {{ 'rejected' if t.priority.value == 'retire' else t.priority.value }}
+                </span>
+                <span class="text-muted" style="font-size:var(--text-xs)">{{ t.content_type.value.replace('_',' ') }}</span>
+              </div>
+              <div style="font-weight:var(--weight-semibold);margin-top:var(--space-2)">{{ t.title }}</div>
+              <div style="font-size:var(--text-xs);color:var(--text-muted);margin-top:2px">
+                keyword: <span style="font-family:var(--font-mono)">{{ t.keyword }}</span>
+                {% set kw_warn = t.keyword|keyword_warning %}
+                {% if kw_warn %}
+                  <div class="check__detail" style="color:var(--warn-text);margin-top:var(--space-1)">
+                    <b>&#9888; {{ kw_warn }}</b></div>
+                {% endif %}
+              </div>
+              {% if row.stage %}
+                {# What already exists for this topic, and how far it got. The
+                   same five stages the vendor card counts, so the two screens
+                   cannot describe the same article differently. #}
+                <div style="font-size:var(--text-xs);margin-top:var(--space-2)">
+                  <span class="badge badge--{{ {'live':'pass','ready':'pass','awaiting publish':'info','needs fixes':'warn','brief':'info'}[row.stage] }}">{{ row.stage }}</span>
+                  {% if row.stage == 'live' %}
+                    published{{ ' ' ~ row.article.published_at.strftime('%d %b %Y') if row.article.published_at }}
+                    {%- if row.article.wp_link %} &mdash;
+                      <a href="{{ row.article.wp_link }}" target="_blank" rel="noopener">view on the site</a>
+                    {%- endif %}
+                  {% elif row.stage == 'awaiting publish' %}
+                    a draft is sitting in WordPress
+                    {%- if row.article.wp_link %} &mdash;
+                      <a href="{{ row.article.wp_link }}" target="_blank" rel="noopener">open it</a>
+                    {%- endif %}
+                  {% elif row.stage == 'brief' %}
+                    brief created, not written yet
+                  {% else %}
+                    {{ row.article.word_count }} words &middot;
+                    QA {{ row.article.qa_score if row.article.qa_score >= 0 else '—' }} &middot;
+                    REACS {{ row.article.reacs_score if row.article.reacs_score >= 0 else '—' }}
+                  {% endif %}
+                </div>
+              {% endif %}
+              {% if row.match %}
+                <div style="font-size:var(--text-xs);margin-top:var(--space-2)">
+                  <span class="badge badge--warn">overlap</span>
+                  close match to an existing post &mdash;
+                  <a href="{{ row.match.post.url }}" target="_blank" rel="noopener">{{ row.match.display_title }}</a>
+                </div>
+              {% else %}
+                <div style="font-size:var(--text-xs);margin-top:var(--space-2)">
+                  <span class="badge badge--pass">gap</span>
+                  no similar post found on rededucation.com
+                </div>
+              {% endif %}
+            </div>
+            <div style="text-align:right;flex:none">
+              <div style="font-family:var(--font-mono);font-weight:var(--weight-bold);font-size:var(--text-lg);color:var(--brand)">{{ t.opportunity_score }}</div>
+              <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-subtle);margin-bottom:var(--space-2)">score</div>
+              {% if row.article %}
+                {# Straight to where the work actually is. "View brief" on a
+                   live article meant three clicks to reach the article. #}
+                {% if row.stage == 'brief' %}
+                  <a class="btn btn--sm" href="{{ url_for('studio.brief_step', article_id=row.article.id) }}">View brief</a>
+                {% else %}
+                  <a class="btn btn--sm" href="{{ url_for('studio.article_step', article_id=row.article.id) }}">View article</a>
+                {% endif %}
+              {% else %}
+                {% if vendor.priority %}
+                <form method="post" action="{{ url_for('studio.advance_topic', topic_id=t.id) }}"
+                      data-busy="Creating the brief — researching live sources, then drafting the brief"
+                      data-busy-hint="Usually 20–60 seconds">
+                  <button type="submit" class="btn btn--primary btn--sm">
+                    {{ 'Create brief' if t.priority.value == 'create' else 'Approve & create brief' }}
+                  </button>
+                </form>
+                {% endif %}
+                {# Triage happens on this page, so an idea you do not want has
+                   to be removable here — until now the only way was the
+                   separate admin board. Confirmed because it is irreversible:
+                   the batch cost an LLM call and a regenerate rarely returns
+                   the same idea. An idea that already has a brief is refused
+                   server-side rather than hidden. #}
+                <form method="post" action="{{ url_for('studio.remove_topic', topic_id=t.id) }}"
+                      style="margin-top:var(--space-2)"
+                      class="js-remove-topic" data-title="{{ t.title }}">
+                  <button type="submit" class="btn btn--ghost btn--sm"
+                          title="Remove this idea from the vendor's list">Remove</button>
+                </form>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    // The title goes in a data- attribute and is read here, rather than being
+    // interpolated into an inline onsubmit. That is not style: a title
+    // containing an apostrophe breaks an inline handler, because the HTML
+    // parser turns Jinja's &#39; back into a quote that closes the JS string
+    // before the script ever runs — and the form then submits with no
+    // confirmation at all. Titles here are model-written, so apostrophes are
+    // a matter of time. Same listener shape as the purge confirm on the
+    // vendor page.
+    document.querySelectorAll("form.js-remove-topic").forEach(function (form) {
+      form.addEventListener("submit", function (e) {
+        var title = form.dataset.title || "this idea";
+        if (!window.confirm("Remove this idea?\n\n" + title)) {
+          e.preventDefault();
+        }
+      });
+    });
+  </script>
+  {% include "_usage_modal.html" %}
+  {% include "_busy.html" %}
+</body>
+</html>

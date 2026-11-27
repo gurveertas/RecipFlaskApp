@@ -1,0 +1,221 @@
+{# The usage modal opened by _usage.html's topbar chips. Included near
+   </body> — deliberately NOT inside .app-header, see _usage.html's comment
+   for why a position:fixed overlay nested in the header renders broken. #}
+<div class="modal-overlay" id="usageModal" hidden role="dialog" aria-modal="true" aria-labelledby="usageTitle">
+  <div class="modal">
+    <div class="modal__head">
+      <div>
+        <div class="modal__title" id="usageTitle">API usage</div>
+        <div class="modal__sub" id="usageSince"></div>
+      </div>
+      <button type="button" class="icon-btn" id="usageClose" aria-label="Close">✕</button>
+    </div>
+    <div class="modal__body" id="usageBody"><p class="text-muted">Loading…</p></div>
+    <div class="modal__foot" id="usageFoot" hidden></div>
+  </div>
+</div>
+<script>
+  (function () {
+    const modal = document.getElementById('usageModal');
+    const body = document.getElementById('usageBody');
+    const foot = document.getElementById('usageFoot');
+    const since = document.getElementById('usageSince');
+    const chipSerperValue = document.getElementById('usageChipSerperValue');
+    const chipGeminiValue = document.getElementById('usageChipGeminiValue');
+    const chipGeminiDot = document.getElementById('usageChipGeminiDot');
+    const chip = document.getElementById('usageChip');
+    const esc = s => String(s).replace(/[&<>"']/g,
+      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const fmt = n => Number(n || 0).toLocaleString();
+    // Feature keys are stored snake_case (the purpose= labels passed at each
+    // call site); show them as words without renaming the stored values.
+    const label = s => String(s).replace(/_/g, ' ');
+
+    // One severity ladder, used by BOTH the topbar chip and the modal's meter.
+    // They read the same number, so they must never disagree about its colour.
+    function severity(used, limit) {
+      const pct = limit ? used / limit : 0;
+      return pct >= 1 ? 'danger' : pct >= 0.8 ? 'warn' : '';
+    }
+
+    function paintChips(summary) {
+      chipSerperValue.textContent = summary.serper_left === null ? '—' : fmt(summary.serper_left);
+      chipGeminiValue.textContent = fmt(summary.llm_today) + '/' + fmt(summary.gemini_daily_limit);
+      const sev = severity(summary.llm_today, summary.gemini_daily_limit);
+      // Same green/amber/red the QA badges already use — a glance should be
+      // enough to notice "close to the daily cap" without opening the modal.
+      // Only the Gemini side recolors — Serper has no daily-cap concept.
+      chipGeminiDot.classList.toggle('usage-chip__dot--warn', sev === 'warn');
+      chipGeminiValue.classList.toggle('usage-chip__value--warn', sev === 'warn');
+      chipGeminiDot.classList.toggle('usage-chip__dot--danger', sev === 'danger');
+      chipGeminiValue.classList.toggle('usage-chip__value--danger', sev === 'danger');
+    }
+
+    function tile(label, value, note, extra) {
+      return `<div class="usage-tile">
+          <div class="usage-tile__label">${label}</div>
+          <div class="usage-tile__value">${value}</div>
+          ${extra || ''}
+          <div class="usage-tile__note">${note}</div>
+        </div>`;
+    }
+
+    // One provider's spend, scaled to ITS OWN maximum on ITS OWN unit. Rows are
+    // sorted by that unit descending, so the bar lengths and the reading order
+    // agree — the thing the flat table made you work out for yourself.
+    function facet(name, unit, rows, valueOf) {
+      if (!rows.length) return '';
+      const ranked = rows.slice().sort((a, b) => valueOf(b) - valueOf(a));
+      const max = valueOf(ranked[0]) || 1;
+      const total = ranked.reduce((s, r) => s + valueOf(r), 0);
+      const bars = ranked.map(r => {
+        const v = valueOf(r);
+        const pct = Math.max(2, Math.round(v * 100 / max));
+        const calls = `${fmt(r.calls)} call${r.calls === 1 ? '' : 's'}`;
+        return `<div class="usage-bar" title="${esc(label(r.purpose))} — ${fmt(v)} ${esc(unit)}, ${calls}">
+            <div>
+              <div class="usage-bar__name">${esc(label(r.purpose))}</div>
+              <div class="usage-bar__sub">${calls}</div>
+            </div>
+            <div><div class="usage-bar__fill" style="width:${pct}%"></div></div>
+            <div class="usage-bar__value">${fmt(v)}</div>
+          </div>`;
+      }).join('');
+      return `<div class="usage-facet">
+          <div class="usage-facet__head">
+            <div class="usage-facet__name">${esc(name)}</div>
+            <div class="usage-facet__unit">${fmt(total)} ${esc(unit)}</div>
+          </div>
+          ${bars}
+        </div>`;
+    }
+
+    function renderUsage(d) {
+      const s = d.summary;
+      paintChips(s);
+      const sev = severity(s.llm_today, s.gemini_daily_limit);
+      const pct = Math.min(100, Math.round(s.llm_today * 100 / s.gemini_daily_limit));
+      const meter = `<div class="usage-meter${sev ? ' usage-meter--' + sev : ''}"
+          role="img" aria-label="${fmt(s.llm_today)} of ${fmt(s.gemini_daily_limit)} daily Gemini calls used">
+          <div class="usage-meter__fill" style="width:${pct}%"></div></div>`;
+
+      // Declared BEFORE `tiles`, which calls it. `const` is not
+      // hoisted-initialised, so using it earlier throws "Cannot access 'ago'
+      // before initialization" — which aborted renderUsage and left the modal
+      // on "Loading…" for ever, with the endpoint returning 200 the whole time.
+      const ago = iso => {
+        const days = Math.floor((Date.now() - Date.parse(iso)) / 86400000);
+        return days <= 0 ? 'today' : days === 1 ? 'yesterday' : `${days} days ago`;
+      };
+
+      const tiles = `<div class="usage-tiles">
+          ${tile('Serper credits left*',
+                 s.serper_left === null ? '—' : fmt(s.serper_left),
+                 s.serper_left === null
+                   ? 'not reconciled yet — enter the serper.dev balance below'
+                   : (s.serper_reconciled_at
+                      ? `*estimate, reconciled ${ago(s.serper_reconciled_at)}`
+                      : '*estimate from the .env baseline — never reconciled'))}
+          ${tile('Gemini calls today',
+                 `${fmt(s.llm_today)} <span class="usage-tile__cap">/ ${fmt(s.gemini_daily_limit)}</span>`,
+                 `${fmt(s.llm_tokens_today)} tokens today`, meter)}
+          ${tile('Serper, 7 days', fmt(s.serper_week),
+                 `${fmt(s.serper_today)} today · ${fmt(s.serper_total)} since tracking`)}
+          ${tile('LLM calls, 7 days', fmt(s.llm_week),
+                 'topics · briefs · articles · rewrites')}
+        </div>`;
+
+      const reconcile = `<form method="post" action="{{ request.script_root }}/admin/usage/reconcile"
+            class="cluster" style="margin-top:var(--space-4);align-items:center">
+          <label style="font-size:var(--text-sm);color:var(--text-muted)">
+            Credits left on serper.dev</label>
+          <input class="input" name="balance" inputmode="numeric" pattern="[0-9]*"
+                 style="max-width:7rem" placeholder="e.g. 90" required>
+          <button type="submit" class="btn btn--sm">Reconcile</button>
+          <span style="font-size:var(--text-xs);color:var(--text-muted)">
+            Credits spent outside this server (a script on a laptop, the Serper
+            playground) are invisible here. Paste the real number to resync.
+          </span>
+        </form>`;
+
+      const serper = d.purposes.filter(p => p.provider === 'serper');
+      const gemini = d.purposes.filter(p => p.provider !== 'serper');
+      const breakdown = d.purposes.length
+        ? facet('Serper', 'credits', serper, r => r.credits)
+          + facet('Gemini', 'tokens', gemini, r => r.tokens)
+        : '<p class="usage-empty">Nothing recorded yet.</p>';
+
+      const dailyRows = d.daily.map(x => `
+        <tr><td><b>${esc(x.day)}</b></td>
+          <td class="num">${x.llm_calls || '—'}</td>
+          <td class="num">${x.tokens ? fmt(x.tokens) : '—'}</td>
+          <td class="num">${x.serper_credits || '—'}</td></tr>`).join('');
+
+      return `
+        ${tiles}
+        ${reconcile}
+        <div class="section-label" style="margin-top:var(--space-5)">Where it went — last 7 days</div>
+        ${breakdown}
+        <div class="section-label" style="margin-top:var(--space-5)">Daily totals</div>
+        ${d.daily.length ? `<table class="data-table">
+          <thead><tr><th>Day</th><th class="num">LLM calls</th>
+            <th class="num">Tokens</th><th class="num">Serper credits</th></tr></thead>
+          <tbody>${dailyRows}</tbody></table>`
+          : '<p class="usage-empty">No activity recorded yet.</p>'}`;
+    }
+
+    function renderFoot(d) {
+      return `<p class="usage-table-note">Local tallies — accurate for this app's spend and its
+        per-feature split; when they disagree with
+        <a href="https://serper.dev" target="_blank" rel="noopener">serper.dev</a> or
+        <a href="https://aistudio.google.com" target="_blank" rel="noopener">AI Studio</a>,
+        the dashboards win. After a Serper top-up, update SERPER_CREDITS_START in .env.</p>`;
+    }
+
+    async function loadUsage() {
+      try {
+        const r = await fetch('{{ request.script_root }}/admin/usage.json');
+        if (!r.ok) throw new Error(r.status);
+        return await r.json();
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function closeModal() { modal.hidden = true; }
+
+    function openModal() {
+      modal.hidden = false;
+      body.innerHTML = '<p class="text-muted">Loading…</p>';
+      foot.hidden = true;
+      since.textContent = '';
+      loadUsage().then(d => {
+        if (!d) {
+          body.innerHTML = '<div class="banner banner--error">Couldn’t load usage data.</div>';
+          return;
+        }
+        // A throw inside renderUsage used to leave "Loading…" on screen with
+        // no clue and a healthy endpoint. Fetch failure had an error path;
+        // RENDER failure did not.
+        try {
+          body.innerHTML = renderUsage(d);
+          since.textContent = d.tracking_since ? 'Tracked since ' + d.tracking_since : '';
+          foot.innerHTML = renderFoot(d);
+          foot.hidden = false;
+        } catch (err) {
+          body.innerHTML = `<div class="banner banner--error">
+            Usage data loaded but could not be displayed: ${String(err)}</div>`;
+        }
+      });
+    }
+
+    chip.addEventListener('click', openModal);
+    document.getElementById('usageClose').addEventListener('click', closeModal);
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // Populate the chips themselves on every page load — glanceable without
+    // opening anything.
+    loadUsage().then(d => { if (d) paintChips(d.summary); });
+  })();
+</script>

@@ -1,0 +1,26 @@
+{# Shared API-usage topbar indicator — include once inside .app-header on
+   every page, next to the theme toggle. One clickable control showing both
+   stats (Serper credits left, Gemini calls today), populated on load from
+   /admin/usage.json. One button, not two: both used to be separate <button>
+   elements that opened the identical modal — confusing, since nothing
+   distinguished what clicking either one did.
+
+   IMPORTANT: only the button lives here. The full-detail modal it opens
+   lives in _usage_modal.html instead, included separately near </body>
+   (same place as _busy.html) — NOT inside .app-header. .app-header has
+   `backdrop-filter` (layout.css), and a `backdrop-filter`/`filter`/
+   `transform` ancestor creates a new containing block for any
+   `position: fixed` descendant, so a fixed-position modal nested inside the
+   header renders clipped to the header's box instead of centered over the
+   full viewport — the exact bug this split avoids. #}
+<button type="button" class="usage-chip" id="usageChip" title="API usage — click for full detail">
+  <span class="usage-chip__item">
+    <span class="usage-chip__dot"></span><span class="usage-chip__label">Serper</span>
+    <span class="usage-chip__value" id="usageChipSerperValue">…</span>
+  </span>
+  <span class="usage-chip__divider"></span>
+  <span class="usage-chip__item">
+    <span class="usage-chip__dot" id="usageChipGeminiDot"></span><span class="usage-chip__label">Gemini</span>
+    <span class="usage-chip__value" id="usageChipGeminiValue">…</span>
+  </span>
+</button>

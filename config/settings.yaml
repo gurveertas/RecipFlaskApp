@@ -1,0 +1,57 @@
+# -----------------------------------------------------------------------------
+# Pipeline settings (recency, corroboration, currency checks). All editable.
+# -----------------------------------------------------------------------------
+
+recency:
+  # Sources older than this (in days) are dropped for time-sensitive topics.
+  max_age_days: 540            # ~18 months
+  # If the topic looks evergreen, the age cap is not applied.
+  evergreen_keywords:
+    - certification path
+    - career path
+    - what is
+    - fundamentals
+    - study guide
+    - exam guide
+    - how to prepare
+
+corroboration:
+  # A stat/security claim is "verified" only if the same figure/entity appears
+  # in at least this many INDEPENDENT domains.
+  min_independent_domains: 2
+  # Keywords that mark a claim as a security/threat claim. If such a claim is
+  # supported ONLY by vendor sources, it is flagged for independent review.
+  security_keywords:
+    - vulnerability
+    - vulnerabilities
+    - cve
+    - zero-day
+    - zero day
+    - exploit
+    - exploited
+    - breach
+    - ransomware
+    - malware
+    - threat actor
+    - attack
+    - compromised
+    - backdoor
+
+# Currency / staleness guardrail. Detects facts your archive gets wrong when
+# posts go stale. Add an entry whenever a vendor changes a credential/product.
+# `pattern` is matched case-insensitively against source text and the topic.
+currency_flags:
+  - pattern: "PCNSE"
+    warning: >-
+      PCNSE was retired by Palo Alto Networks in 2025 and replaced by the NGFW
+      Engineer credential. Verify whether the source treats PCNSE as current
+      before repeating that framing.
+  - pattern: "PCNSA"
+    warning: >-
+      PCNSA was retired in 2025 under Palo Alto's role-based framework. Confirm
+      current credential naming before publishing.
+
+# Flag posts/sources that lean on a past year as if it were current
+# (e.g. a 2026 post citing "2024 data" as the latest available is fine; a title
+# or body claiming to be "the 2024 guide" in 2026 is stale).
+stale_year_lookback: 2   # years before "now" that count as stale if used in title framing

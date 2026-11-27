@@ -1,0 +1,141 @@
+/* ============================================================================
+   preview.css — how the article will look on rededucation.com
+   ----------------------------------------------------------------------------
+   NOT part of the app's design system. Every value was MEASURED with
+   getComputedStyle across a SAMPLE of live posts, not matched by eye and not
+   taken from one page — the first pass did exactly that and got H3 wrong.
+
+   Sample: 11 modern long-form posts (certification guides, comparisons,
+   salary analyses) plus 11 randomly drawn posts for contrast. Findings:
+
+     11/11  body 16px / 20.8px, #5d686a, white page, links #e41f1b
+      7/7   h2 present -> Bebas Neue 48px, #262626   (consistent)
+      4/5   h3 colour  -> #262626 dark. Only ONE post (the F5 2026 guide)
+            uses red #d32f2f, and building from that single page is what put
+            a wrong red on every H3 here until the wider sample was taken.
+      4/6   tables use the red-header house style below; the other 2 are
+            simply unstyled (theme default). Red is the deliberate pattern.
+
+   Older posts (the random sample) diverge more — many have no H2 at all.
+   This file targets the CURRENT long-form template, which is what generated
+   articles imitate.
+
+     text column   807px inside a min(100%,1300px) container
+     body          Roboto 16px / 20.8px, #5d686a
+     h2            Bebas Neue 48px/48px, weight 400, #262626, margin 40 0 24
+     h3            Bebas Neue 36px,      weight 400, #262626, margin 40 0 24
+     links         #e41f1b, no underline
+     li            16px / 20.8px, margin-bottom 5px
+     tables        Arial 15px/1.6, #d32f2f header on white text, 1px #ddd
+                   borders, 14px cell padding, 30px vertical margin
+     page          white
+
+   Deliberately theme-INDEPENDENT: the live site is white in both, so the
+   preview must not follow the app's dark mode or it stops being a preview.
+   Everything is scoped under .sitepreview so none of it leaks into the app.
+   ============================================================================ */
+
+.sitepreview {
+  /* The published column width, so line lengths and wrap points match. */
+  --sp-text: #5d686a;
+  --sp-heading: #262626;
+  --sp-red: #d32f2f;
+  --sp-link: #e41f1b;
+  --sp-rule: #e6e6e6;
+
+  background: #ffffff;
+  color: var(--sp-text);
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 20.8px;
+  padding: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+}
+.sitepreview__col { max-width: 807px; margin: 0 auto; }
+
+/* Bebas Neue is a CONDENSED display face — at 48px it sets far narrower than
+   a fallback grotesk would, so headline wrap points only match when it
+   actually loads. The stack degrades to a condensed system face rather than
+   a normal-width one, which keeps the preview approximately honest offline
+   (flagged in the UI when the font is unavailable). */
+.sitepreview h1,
+.sitepreview h2,
+.sitepreview h3,
+.sitepreview h4 {
+  font-family: "Bebas Neue", "Oswald", "Arial Narrow", Impact, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+.sitepreview h1 { font-size: 48px; line-height: 48px; color: var(--sp-heading); margin: 0 0 24px; }
+.sitepreview h2 { font-size: 48px; line-height: 48px; color: var(--sp-heading); margin: 40px 0 24px; }
+.sitepreview h3 { font-size: 36px; line-height: 38px; color: var(--sp-heading); margin: 40px 0 24px; }
+.sitepreview h4 { font-size: 28px; line-height: 30px; color: var(--sp-heading); margin: 32px 0 16px; }
+
+.sitepreview p { margin: 0 0 20px; }
+.sitepreview a { color: var(--sp-link); text-decoration: none; }
+.sitepreview a:hover { text-decoration: underline; }
+.sitepreview strong, .sitepreview b { font-weight: 700; color: #3f4749; }
+.sitepreview ul, .sitepreview ol { margin: 0 0 20px; padding-left: 22px; }
+.sitepreview li { margin-bottom: 5px; }
+.sitepreview blockquote {
+  margin: 24px 0; padding: 12px 20px;
+  border-left: 3px solid var(--sp-red); color: #4a5355;
+}
+.sitepreview img { max-width: 100%; height: auto; }
+.sitepreview hr { border: 0; border-top: 1px solid var(--sp-rule); margin: 32px 0; }
+
+/* Tables: the site inline-styles these per post — 4 of the 6 sampled posts
+   that have a table carry this exact treatment (#d32f2f header row, white
+   bold cells, 14px padding, 1px #ddd, Arial 15px); the other 2 left theirs
+   unstyled, so this is the deliberate pattern rather than a universal one.
+   nh3 strips style attributes (it must — this is model output built from
+   scraped pages), so the look is reapplied here from the measured values. */
+.sp-tablewrap { overflow-x: auto; width: 100%; margin: 30px 0; }
+.sitepreview table {
+  width: 100%; border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px; line-height: 1.6;
+}
+.sitepreview thead tr, .sitepreview th {
+  background: var(--sp-red); color: #ffffff; text-align: left;
+}
+.sitepreview th, .sitepreview td { padding: 14px; border: 1px solid #ddd; }
+.sitepreview td { color: #3f4749; }
+
+/* FAQ accordion — Elementor's nested-accordion, first item expanded. */
+.sp-faq { border-bottom: 1px solid var(--sp-rule); }
+.sp-faq__q {
+  cursor: pointer; list-style: none;
+  font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 18px; font-weight: 600; color: var(--sp-heading);
+  padding: 18px 28px 18px 0; position: relative;
+}
+.sp-faq__q::-webkit-details-marker { display: none; }
+.sp-faq__q::after {
+  content: "+"; position: absolute; right: 4px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 22px; font-weight: 400; color: var(--sp-red); line-height: 1;
+}
+.sp-faq[open] > .sp-faq__q::after { content: "\2013"; }
+.sp-faq__a { padding: 0 0 18px; }
+.sp-faq__a > p:last-child { margin-bottom: 0; }
+
+/* The byline the REACS standard requires on every article. */
+.sp-byline {
+  font-size: 14px; color: #7b8486; margin: 0 0 28px;
+  padding-bottom: 20px; border-bottom: 1px solid var(--sp-rule);
+}
+
+/* ---- preview chrome (the app's UI around the page, not the page) --------- */
+.preview-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4);
+}
+.preview-widths { display: inline-flex; gap: var(--space-1); }
+.preview-note { font-size: var(--text-xs); color: var(--text-muted); }
+/* Width simulation: the column narrows exactly as the live site's does, so a
+   table that overflows on a phone overflows here too. */
+.sitepreview--mobile  .sitepreview__col { max-width: 390px; }
+.sitepreview--tablet  .sitepreview__col { max-width: 640px; }
+.sitepreview--mobile  { padding: 20px; }

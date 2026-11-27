@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blog Generator — Red Education</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    // Apply saved theme before paint to avoid a flash of the wrong theme.
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+  <style>
+    /* This page's whole identity is speed and zero ceremony — a centred
+       "command bar" hero rather than Article Studio's wide, structured
+       grid. Results (once there's a draft to show) use the full page width,
+       since a QA checklist and article body genuinely benefit from the room.
+
+       The eyebrow/title/lede TYPOGRAPHY reuses .page-head's shared classes
+       (built for /guide, this is their second use) rather than the private
+       eyebrow/title/lede rules that used to live here — those had quietly
+       drifted onto their own font-family (monospace, not the app's sans),
+       size (2rem vs the shared 1.875rem/--text-2xl) and weight, so "QUICK
+       DRAFT" rendered as a visually unrelated kind of label to every other
+       page's eyebrow instead of the same element reused.
+
+       max-width was 640px — about half of .app-main's 1200px every other
+       page fills — and narrowing only THIS page read as a mismatch rather
+       than a deliberate variant, especially once the typography stopped
+       being different too. Widening the whole hero to a fixed in-between
+       value (900px) just moved the mismatch: the help panel and results
+       below it are NOT wrapped in this constraint, so they still fill the
+       full 1200px, and the hero above them visibly stopped short of their
+       own right edge — a second-order version of the same complaint, now
+       within one page instead of across two.
+       So .quickdraft-hero itself carries NO width cap at all — it fills
+       .app-main exactly like every other page's content, help panel and
+       results included. Only .quickdraft-command (the actual search bar +
+       mode row) gets a comfortable centred cap: a single-line input+button
+       control stretched across the full 1200px would read as thin and
+       impractical, the one part of this page where "as wide as everything
+       else" is a bad idea. The eyebrow/title stay full-width and centred —
+       normal, common practice for hero text — but the LEDE is different:
+       .page-head__sub carries its own max-width (62ch) with no margin, so
+       once the hero stopped constraining width, that narrower box had
+       nothing centering IT within the now-wider hero and sat flush against
+       the left edge instead — text-align:center still centred the words
+       WITHIN that box, but the box itself wasn't centred, so the result read
+       as lopsided (a wide gap on the right) rather than as truly centred.
+       max-width alone was never going to fix that; it needs its own
+       margin:auto here, same as .quickdraft-command below it. */
+    .quickdraft-hero { margin: var(--space-6) 0 var(--space-7); text-align: center; }
+    .quickdraft-hero .page-head__sub { margin-left: auto; margin-right: auto; }
+    /* .page-head__sub carries no bottom margin, so without a top margin here
+       the lede sat directly on top of the search bar with only its line-box
+       between them. */
+    .quickdraft-command { max-width: 720px; margin: var(--space-5) auto 0; }
+
+    .quickdraft-bar {
+      display: flex; align-items: center; gap: var(--space-2);
+      background: var(--surface); border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg); padding: var(--space-2);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    /* No shadow at rest — tokens.css is explicit that elevation here is
+       flat-with-border, shadow reserved for things that genuinely float
+       (modals, sticky bars); this bar sits in normal page flow like every
+       .card, so it kept none. A shadow WAS here unconditionally before,
+       which made it the one surface in the app still using the old
+       drop-shadow language. A focus-ring on interaction (the same affordance
+       every .input already uses) still marks it as the page's primary
+       action without resurrecting that inconsistency. */
+    .quickdraft-bar:focus-within { border-color: var(--brand); box-shadow: var(--focus-ring); }
+    .quickdraft-bar__input {
+      flex: 1; min-width: 0; border: none; background: transparent;
+      font-size: var(--text-md); padding: var(--space-3) var(--space-4);
+      color: var(--text); outline: none;
+    }
+    .quickdraft-bar__input::placeholder { color: var(--text-subtle); }
+    .quickdraft-bar__input:disabled { opacity: 0.55; cursor: not-allowed; }
+    .quickdraft-bar__submit { flex: none; padding: 0.85rem 1.6rem; }
+
+    .quickdraft-options {
+      display: flex; flex-wrap: wrap; gap: var(--space-3);
+      justify-content: center; align-items: flex-start; margin-top: var(--space-4);
+    }
+    .quickdraft-options input#keywordsField { width: 220px; }
+    .quickdraft-options .input { width: 180px; }
+    .quickdraft-hero .searchbar__hint { margin-top: var(--space-3); }
+    .quickdraft-hero .field__hint { text-align: center; }
+
+    /* Tags render in their own row below the inputs — the input itself
+       never changes size or position as tags are added, so typing stays
+       predictable instead of the field growing/scrolling under you. */
+    .keywords-tags {
+      display: flex; flex-wrap: wrap; gap: var(--space-2);
+      justify-content: center; margin-top: var(--space-3);
+    }
+    .keywords-tags:empty { display: none; margin-top: 0; }
+    #keywordsField:disabled::placeholder { color: var(--warn-text); }
+
+    @media (max-width: 620px) {
+      /* Scoped to this hero specifically — .page-head__title is also used by
+         /guide, which shouldn't inherit a mobile size tuned for this one
+         centered, narrower-max-width hero as an unintended side effect. */
+      .quickdraft-hero .page-head__title { font-size: 1.5rem; }
+      .quickdraft-options input#keywordsField, .quickdraft-options .input { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">Blog Generator</div>
+        <div class="app-header__subtitle">Fast, single-shot drafts — no vendor or setup required</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      <!-- ---- hero: a command bar, not a form buried in a card ---- -->
+      <div class="quickdraft-hero">
+        <div class="page-head__eyebrow">Quick draft</div>
+        <h1 class="page-head__title">Generate a draft in seconds</h1>
+        <p class="page-head__sub">
+          Type any topic — no vendor, approval, or brief needed. Nothing here
+          is saved; for governed, persisted content tied to a vendor, use
+          <a href="{{ url_for('studio.vendor_step') }}">Article Studio</a> instead.
+        </p>
+
+        <form id="form" class="quickdraft-command">
+          <div class="quickdraft-bar">
+            <label class="sr-only" for="topic">Topic</label>
+            <input class="quickdraft-bar__input" type="text" id="topic"
+                   placeholder="e.g. Palo Alto NGFW Engineer certification 2026">
+            <button type="submit" class="btn btn--primary quickdraft-bar__submit" id="go">Generate</button>
+          </div>
+
+          <div class="quickdraft-options">
+            <label class="sr-only" for="keywordsField">Keywords</label>
+            <input type="text" class="input input--pill" id="keywordsField" placeholder="SEO keywords (optional)">
+
+            <label class="sr-only" for="region">Region</label>
+            <input class="input input--pill" type="text" id="region" placeholder="Region (optional)">
+
+            <div class="segmented segmented--compact">
+              <label class="segmented__option">
+                <input type="radio" name="mode" value="demo" checked>
+                <span class="segmented__face">Demo</span>
+              </label>
+              <label class="segmented__option">
+                <input type="radio" name="mode" value="live" {% if not live_available %}disabled{% endif %}>
+                <span class="segmented__face">Live</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="keywords-tags" id="keywordsTags"></div>
+
+          <p class="searchbar__hint" id="hint"></p>
+        </form>
+      </div>
+
+      <details class="help">
+        <summary>How this page works — inputs & modes</summary>
+        <div class="help__body">
+          <p>One-shot draft generation: research &rarr; verify &rarr; write &rarr; QA, streamed live.
+            Nothing is saved — for governed, persisted articles use Article Studio.</p>
+          <dl>
+            <dt>Topic</dt><dd>Free text. In Live mode it drives the web research, so naming the vendor helps (&ldquo;Palo Alto Panorama management&rdquo; beats &ldquo;centralised firewall management&rdquo;).</dd>
+            <dt>SEO keywords</dt><dd>Optional, up to 8 — press Enter or comma after each. Every keyword must appear <b>verbatim</b> in the draft; QA checks this mechanically.</dd>
+            <dt>Region</dt><dd>Optional. Localises salary/market context where the sources support it.</dd>
+            <dt>Demo</dt><dd>Bundled sample sources + deterministic writer. Free, instant, no API keys — for trying the pipeline.</dd>
+            <dt>Live</dt><dd>Real web research on the trusted-domain allowlist, claim verification, LLM writing with QA retries. Costs Serper credits + LLM calls.</dd>
+          </dl>
+          <p style="margin-top:var(--space-3)">Full walkthrough of everything: <a href="{{ url_for('guide') }}">Guide</a>.</p>
+        </div>
+      </details>
+
+      <!-- ---- results ---- -->
+      <section class="card" id="results">
+        <div class="card__body">
+          <div class="placeholder">
+            {% include '_empty_icon.html' %}
+            <div class="placeholder__title">No draft yet</div>
+            <div>Enter a topic and generate. Every draft is checked by the reliability
+              QA harness before it’s shown.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const liveAvailable = {{ 'true' if live_available else 'false' }};
+    const form = document.getElementById('form');
+    const results = document.getElementById('results');
+    const go = document.getElementById('go');
+    const hint = document.getElementById('hint');
+    const topicEl = document.getElementById('topic');
+    let lastDraft = null;
+
+    /* ---- mode hint ---- */
+    function syncMode() {
+      const mode = form.mode.value;
+      topicEl.disabled = (mode === 'demo');
+      hint.textContent = mode === 'demo'
+        ? 'Demo mode uses the bundled sample sources; the topic is fixed to the sample. Region can still be set.'
+        : 'Live mode retrieves real sources and generates a draft, then re-checks it (regenerating if it fails QA). Any topic works: an IT subject is researched from the trusted domain list, anything outside it from the open web.';
+      if (!liveAvailable && mode === 'demo')
+        hint.textContent += ' Live is disabled until API keys are configured on the server.';
+    }
+    form.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', syncMode));
+    syncMode();
+
+    /* ---- keywords tag input: field stays put, tags render below it ---- */
+    const keywordsTags = document.getElementById('keywordsTags');
+    const keywordsField = document.getElementById('keywordsField');
+    let keywordTags = [];
+
+    function renderKeywordTags() {
+      keywordsTags.innerHTML = '';
+      keywordTags.forEach((kw, i) => {
+        const tag = document.createElement('span');
+        tag.className = 'tags-input__tag';
+        tag.append(kw);
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'tags-input__remove';
+        remove.setAttribute('aria-label', `Remove ${kw}`);
+        remove.textContent = '×';
+        remove.addEventListener('click', (e) => {
+          e.stopPropagation();
+          keywordTags.splice(i, 1);
+          renderKeywordTags();
+        });
+        tag.append(remove);
+        keywordsTags.appendChild(tag);
+      });
+      const atLimit = keywordTags.length >= MAX_KEYWORDS;
+      keywordsField.disabled = atLimit;
+      keywordsField.placeholder = atLimit ? `Limit reached (${MAX_KEYWORDS})` : 'SEO keywords (optional)';
+    }
+
+    const MAX_KEYWORDS = 8;   // an SEO keyword list this long stops being useful anyway
+
+    function addKeyword(raw) {
+      const kw = raw.trim();
+      if (!kw || keywordTags.length >= MAX_KEYWORDS) return;
+      if (!keywordTags.some(k => k.toLowerCase() === kw.toLowerCase())) keywordTags.push(kw);
+    }
+
+    function commitTypedKeyword() {
+      addKeyword(keywordsField.value);
+      keywordsField.value = '';
+      renderKeywordTags();
+    }
+
+    // Typing (or pasting) a comma turns everything before it into a tag —
+    // covers both "type a word, hit comma" and pasting a comma-separated list.
+    keywordsField.addEventListener('input', () => {
+      if (!keywordsField.value.includes(',')) return;
+      const parts = keywordsField.value.split(',');
+      const trailing = parts.pop();
+      parts.forEach(addKeyword);
+      keywordsField.value = trailing;
+      renderKeywordTags();
+    });
+    keywordsField.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitTypedKeyword();
+      } else if (e.key === 'Backspace' && !keywordsField.value && keywordTags.length) {
+        keywordTags.pop();
+        renderKeywordTags();
+      }
+    });
+
+    /* ---- progress step definitions ----
+       start/end are cumulative percentages this step spans; retries of
+       generate/qa nudge the message but never move the bar backwards. */
+    const LIVE_STEPS = [
+      {key: 'retrieve', title: 'Search trusted sources', start: 2,  end: 22},
+      {key: 'verify',   title: 'Verify & corroborate claims', start: 22, end: 40},
+      {key: 'generate', title: 'Write draft', start: 40, end: 75},
+      {key: 'qa',       title: 'Run reliability QA', start: 75, end: 96},
+    ];
+    const DEMO_STEPS = [
+      {key: 'load',     title: 'Load sample sources', start: 5,  end: 30},
+      {key: 'verify',   title: 'Verify & corroborate claims', start: 30, end: 55},
+      {key: 'generate', title: 'Generate draft', start: 55, end: 80},
+      {key: 'qa',       title: 'Run reliability QA', start: 80, end: 96},
+    ];
+
+    /* ---- submit: start a job, then stream its progress ---- */
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mode = form.mode.value;
+      commitTypedKeyword();   // catch any text typed but not yet Enter-confirmed
+      const payload = {
+        topic: topicEl.value.trim(),
+        region: document.getElementById('region').value.trim(),
+        keywords: keywordTags.join(','),
+        mode,
+      };
+      const steps = mode === 'live' ? LIVE_STEPS : DEMO_STEPS;
+      go.disabled = true;
+      renderProgress(steps, 0, {});
+      try {
+        // script_root, not a bare "/api/jobs": the app is mounted under a
+        // path prefix on the shared nginx host, and url_for() only fixes
+        // server-rendered links — a hardcoded path here would 404.
+        const res = await fetch('{{ request.script_root }}/api/jobs', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(payload),
+        });
+        const started = await res.json();
+        if (!started.ok) { renderError(started.error); return; }
+        await streamJob(started.job_id, steps);
+      } catch (err) {
+        renderError(String(err));
+      } finally {
+        go.disabled = false;
+      }
+    });
+
+    /* ---- stream a job's progress via Server-Sent Events ---- */
+    function streamJob(jobId, steps) {
+      return new Promise((resolve) => {
+        const es = new EventSource(`{{ request.script_root }}/api/jobs/${jobId}/stream`);
+        const state = {};
+        let pct = 0;
+
+        es.onmessage = (ev) => {
+          const item = JSON.parse(ev.data);
+
+          if (item.type === 'progress') {
+            const step = steps.find(s => s.key === item.step);
+            state[item.step] = {status: item.status, message: item.message};
+            if (step) {
+              if (item.status === 'active') pct = Math.max(pct, step.start);
+              if (item.status === 'done' || item.status === 'warn') pct = Math.max(pct, step.end);
+            }
+            renderProgress(steps, pct, state);
+
+          } else if (item.type === 'done') {
+            steps.forEach(s => {
+              if (!state[s.key] || state[s.key].status === 'active') {
+                state[s.key] = {status: 'done', message: state[s.key]?.message};
+              }
+            });
+            if (!item.qa.passed) state['qa'] = {...state['qa'], status: 'warn'};
+            renderProgress(steps, 100, state);
+            lastDraft = item.draft;
+            render(item);
+            es.close();
+            resolve();
+
+          } else if (item.type === 'error') {
+            for (const k in state) {
+              if (state[k].status === 'active') state[k] = {status: 'error', message: item.error};
+            }
+            renderProgress(steps, pct, state);
+            appendError(item.error);
+            es.close();
+            resolve();
+          }
+        };
+
+        es.onerror = () => {
+          es.close();
+          appendError('Lost connection to the server while generating. Please try again.');
+          resolve();
+        };
+      });
+    }
+
+    /* ---- rendering ---- */
+    function setResults(inner) {
+      results.innerHTML = `<div class="card__body">${inner}</div>`;
+    }
+
+    function renderProgress(steps, pct, state) {
+      const stepsHtml = steps.map(s => {
+        const st = state[s.key] || {status: 'pending', message: ''};
+        const icon = {done: '✓', warn: '!', error: '✕', active: '<span class="progress-step__dot"></span>', pending: ''}[st.status];
+        return `<div class="progress-step progress-step--${st.status}">
+          <span class="progress-step__icon">${icon}</span>
+          <div class="progress-step__body">
+            <div class="progress-step__title">${escapeHtml(s.title)}</div>
+            ${st.message ? `<div class="progress-step__message">${escapeHtml(st.message)}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+      setResults(`
+        <div class="progress">
+          <div class="progress__label"><span>Generating…</span><b>${Math.round(pct)}%</b></div>
+          <div class="progress__track"><div class="progress__fill" style="width:${pct}%"></div></div>
+          <div class="progress-steps">${stepsHtml}</div>
+        </div>`);
+    }
+
+    function renderError(msg) {
+      setResults(`<div class="banner banner--error"><b>Couldn’t generate:</b> ${escapeHtml(msg)}</div>`);
+    }
+
+    function appendError(msg) {
+      results.querySelector('.card__body').insertAdjacentHTML('beforeend',
+        `<div class="banner banner--error" style="margin-top:var(--space-4)">
+           <b>Couldn’t generate:</b> ${escapeHtml(msg)}</div>`);
+    }
+
+    function renderProse(issues) {
+      const out = document.getElementById('proseOut');
+      if (!out) return;
+      if (!issues || !issues.length) {
+        out.innerHTML = `<div class="text-muted" style="font-size:var(--text-sm)">
+          Proofread found nothing to raise.</div>`;
+        return;
+      }
+      out.innerHTML = `<div class="section-label">Proofread — advisory</div>
+        <div class="checklist">${issues.map(i => `
+          <div class="check">
+            <span class="badge badge--warn check__badge">${escapeHtml(i.kind || 'note')}</span>
+            <div>
+              <div class="check__name">${escapeHtml(i.problem || '')}</div>
+              ${i.quote ? `<div class="check__detail">&ldquo;${escapeHtml(i.quote)}&rdquo;</div>` : ''}
+              ${i.suggestion ? `<div class="check__detail"><b>Try:</b> ${escapeHtml(i.suggestion)}</div>` : ''}
+            </div>
+          </div>`).join('')}</div>`;
+    }
+
+    function wireTools(data) {
+      const msg = document.getElementById('toolMsg');
+      const rw = document.getElementById('rwGo');
+      const pf = document.getElementById('pfGo');
+      const id = data.draft_id;
+      const busy = (on, what) => {
+        if (rw) rw.disabled = on;
+        if (pf) pf.disabled = on;
+        msg.textContent = on ? what : '';
+      };
+
+      if (rw) rw.addEventListener('click', async () => {
+        busy(true, 'Rewriting the section…');
+        try {
+          const r = await fetch(
+            `{{ request.script_root }}/api/drafts/${id}/rewrite-section`,
+            {method: 'POST', headers: {'Content-Type': 'application/json'},
+             body: JSON.stringify({
+               heading: document.getElementById('rwHeading').value,
+               instruction: document.getElementById('rwInstruction').value})});
+          const d = await r.json();
+          busy(false, '');
+          // The response is the same shape generation returns, so the whole
+          // result re-renders with the new QA verdict rather than going stale.
+          if (d.ok) render(d); else msg.textContent = d.error || 'Rewrite failed.';
+        } catch (e) { busy(false, ''); msg.textContent = 'Could not reach the server.'; }
+      });
+
+      if (pf) pf.addEventListener('click', async () => {
+        busy(true, 'Proofreading…');
+        try {
+          const r = await fetch(`{{ request.script_root }}/api/drafts/${id}/proofread`,
+                                {method: 'POST'});
+          const d = await r.json();
+          busy(false, '');
+          if (d.ok) renderProse(d.prose_review);
+          else msg.textContent = d.error || 'Proofread failed.';
+        } catch (e) { busy(false, ''); msg.textContent = 'Could not reach the server.'; }
+      });
+    }
+
+    function wirePush() {
+      const btn = document.getElementById('pushWp');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const msg = document.getElementById('pushMsg');
+        btn.disabled = true;
+        msg.textContent = 'Sending…';
+        try {
+          const r = await fetch(
+            `{{ request.script_root }}/api/drafts/${btn.dataset.draft}/wordpress`,
+            {method: 'POST'});
+          const d = await r.json();
+          if (d.ok) {
+            msg.innerHTML = `Created draft <a href="${escapeAttr(d.link)}"
+              target="_blank" rel="noopener">post ${d.post_id}</a> — unpublished.`;
+          } else {
+            btn.disabled = false;
+            msg.textContent = d.error || 'Could not send it.';
+          }
+        } catch (e) {
+          btn.disabled = false;
+          msg.textContent = 'Could not reach the server.';
+        }
+      });
+    }
+
+    function render(data) {
+      const d = data.draft, qa = data.qa;
+      const verdict = qa.passed
+        ? `<div class="verdict verdict--ok"><span class="verdict__icon">✓</span>
+             <span>Publish candidate — all checks passed${qa.warned ? `, ${qa.warned} warning(s)` : ''}</span></div>`
+        : `<div class="verdict verdict--blocked"><span class="verdict__icon">✕</span>
+             <span>Blocked — ${qa.failed} check(s) failed. Not a publish candidate.</span></div>`;
+
+      const checks = qa.checks.map(c => `
+        <div class="check">
+          <span class="badge badge--${c.status} check__badge">${c.status.toUpperCase()}</span>
+          <div>
+            <div class="check__name">${escapeHtml(c.name)}</div>
+            ${c.detail ? `<div class="check__detail">${escapeHtml(c.detail)}</div>` : ''}
+          </div>
+        </div>`).join('');
+
+      const refs = d.references.map(r => `
+        <li><span class="reflist__tag">[${escapeHtml(r.tag)}]</span>
+          <a href="${escapeAttr(r.url)}" target="_blank" rel="noopener">${escapeHtml(r.title || r.url)}</a></li>`).join('');
+
+      // Push is offered only when QA passes — the same bar Article Studio
+      // applies, and the button is absent rather than disabled-and-explained
+      // because a blocked draft has nothing to send.
+      const push = (qa.passed && data.draft_id)
+        ? `<div class="cluster" style="align-items:center">
+             <button type="button" class="btn btn--primary" id="pushWp"
+                     data-draft="${escapeAttr(data.draft_id)}">Send to WordPress</button>
+             <span class="text-muted" style="font-size:var(--text-sm)">
+               Creates a DRAFT post. Going live stays a human act.</span>
+             <span id="pushMsg" style="font-size:var(--text-sm)"></span>
+           </div>`
+        : '';
+
+      // Rewrite one section, and proofread. Offered whatever the verdict —
+      // a blocked draft is exactly when you want to fix a section, unlike the
+      // push button above, which has nothing to send.
+      const sections = (data.sections || []).map(
+        h => `<option value="${escapeAttr(h)}">${escapeHtml(h)}</option>`).join('');
+      const tools = data.draft_id ? `
+        <div class="stack" style="gap:var(--space-2)">
+          <div class="cluster" style="align-items:center">
+            ${sections ? `
+              <select class="input" id="rwHeading" style="max-width:16rem">${sections}</select>
+              <input class="input" id="rwInstruction" style="max-width:20rem"
+                     placeholder="Optional instruction — e.g. add the cost">
+              <button type="button" class="btn btn--sm" id="rwGo">Rewrite section</button>`
+              : '<span class="text-muted" style="font-size:var(--text-sm)">No H2 sections to rewrite.</span>'}
+            <button type="button" class="btn btn--sm" id="pfGo">Proofread</button>
+            <span id="toolMsg" style="font-size:var(--text-sm)"></span>
+          </div>
+          <div id="proseOut"></div>
+        </div>` : '';
+
+      setResults(`
+        <div class="stack">
+          ${verdict}
+          ${push}
+          ${tools}
+
+          <div>
+            <div class="section-label">Reliability QA · ${escapeHtml(data.mode)} mode</div>
+            <div class="checklist">${checks}</div>
+          </div>
+
+          <hr class="divider">
+
+          <div>
+            <h2 class="article-title" style="font-size:var(--text-xl);letter-spacing:-0.02em;margin-bottom:var(--space-2)">${escapeHtml(d.title)}</h2>
+            <div class="meta">
+              <span class="meta__item"><b>${d.word_count}</b> words</span>
+              <span class="meta__item"><b>Meta:</b> ${d.meta_len} chars</span>
+              <span class="meta__item"><b>Slug:</b> ${escapeHtml(d.slug)}</span>
+            </div>
+            <p class="text-muted" style="margin-top:var(--space-2);font-size:var(--text-sm)">${escapeHtml(d.meta_description)}</p>
+          </div>
+
+          <div>
+            <div class="section-label">Draft</div>
+            <div class="article">${d.body_html}</div>
+          </div>
+
+          ${refs ? `<div>
+            <div class="section-label">References</div>
+            <ul class="reflist">${refs}</ul>
+          </div>` : ''}
+
+          <div class="toolbar">
+            <button class="btn btn--sm" onclick="downloadFile('md')">Download .md</button>
+            <button class="btn btn--sm" onclick="downloadFile('json')">Download .json</button>
+            <button class="btn btn--sm" onclick="copyMarkdown(this)">Copy markdown</button>
+          </div>
+        </div>`);
+      // setResults replaces innerHTML, so the controls only exist now.
+      wirePush();
+      wireTools(data);
+      if (data.prose_review) renderProse(data.prose_review);
+    }
+
+    /* ---- draft actions ---- */
+    function downloadFile(kind) {
+      if (!lastDraft) return;
+      const isMd = kind === 'md';
+      const content = isMd ? lastDraft.body_markdown : JSON.stringify(lastDraft, null, 2);
+      const blob = new Blob([content], {type: isMd ? 'text/markdown' : 'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (lastDraft.slug || 'draft') + (isMd ? '.md' : '.json');
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+    function copyMarkdown(btn) {
+      if (!lastDraft) return;
+      navigator.clipboard.writeText(lastDraft.body_markdown);
+      const t = btn.textContent; btn.textContent = 'Copied ✓';
+      setTimeout(() => btn.textContent = t, 1400);
+    }
+
+    /* ---- escaping ---- */
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function escapeAttr(s) { return escapeHtml(s); }
+  </script>
+  {% include "_usage_modal.html" %}
+</body>
+</html>

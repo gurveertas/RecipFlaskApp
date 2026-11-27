@@ -1,0 +1,7 @@
+{# Shared flash-message banners. Categories ("error"/"success") map directly
+   to the .banner--error / .banner--success component classes. Rendered once
+   per page where status messages can appear; get_flashed_messages() consumes
+   them so they don't persist past this render. #}
+{% for category, message in get_flashed_messages(with_categories=true) %}
+  <div class="banner banner--{{ category }}">{{ message }}</div>
+{% endfor %}

@@ -1,0 +1,60 @@
+# Secrets. .env holds WORDPRESS_APP_PASSWORD, SECRET_KEY and every API key —
+# it must never be committed. .env.example is the template and has blank
+# values, so it is deliberately un-ignored below.
+.env
+.env.*
+!.env.example
+
+# Virtualenv
+venv/
+.venv/
+
+# Python bytecode and tool caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# The live databases.
+config/*.db
+# ...and the timestamped safety copies taken before each schema change
+# (app.db.bak-topic-theme-*, app.db.backup-*-pre-remove-analytics, etc).
+# `config/*.db` does NOT match these — the suffix comes after ".db" — which
+# left 17 files / ~8.7 MB of full database dumps committable.
+config/*.db.bak*
+config/*.db.backup*
+# SQLite sidecars, present only while the app is running.
+config/*.db-journal
+config/*.db-wal
+config/*.db-shm
+
+# Server runtime state, kept inside the project folder so a deployment is
+# self-contained. Both are ignored, which is exactly what makes them survive
+# `git reset --hard origin/main` on update — that only rewrites TRACKED files.
+# Never run `git clean -xdf` here: it deletes ignored files too, and would
+# take the live database with it.
+data/
+backups/
+
+# Runtime output
+server.log
+*.log
+
+# macOS
+.DS_Store
+
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+data/
+*.db
+*.sqlite
+*.sqlite3
+*.log
+__pycache__/
+.pytest_cache/

@@ -1,0 +1,146 @@
+/* ============================================================================
+   tokens.css — design tokens (the single source of truth)
+   ----------------------------------------------------------------------------
+   Every other stylesheet and component reads from these variables. To rebrand
+   or retheme the whole app, change values here and nothing else. Nothing in this
+   file styles an element directly.
+
+   Visual direction: the airy editorial layout of a modern blog template —
+   near-white canvas, pure-white cards on hairline borders, near-flat elevation,
+   pill controls, tight bold headings, and a single vivid accent used sparingly
+   (section labels, links, primary actions). The accent is Red Education red,
+   not the reference's blue.
+   ============================================================================ */
+
+:root {
+  /* ---- brand -------------------------------------------------------------- */
+  --brand:            #e5352b;   /* Red Education accent — swap to rebrand */
+  --brand-strong:     #b42318;
+  --brand-soft:       #fef2f1;   /* tinted surface for brand emphasis (light) */
+  --brand-contrast:   #ffffff;   /* text/icon on a brand-filled surface */
+
+  /* ---- spacing scale (4px base) ------------------------------------------- */
+  --space-1: 0.25rem;   /*  4 */
+  --space-2: 0.5rem;    /*  8 */
+  --space-3: 0.75rem;   /* 12 */
+  --space-4: 1rem;      /* 16 */
+  --space-5: 1.5rem;    /* 24 */
+  --space-6: 2rem;      /* 32 */
+  --space-7: 3rem;      /* 48 */
+
+  /* ---- radius --------------------------------------------------------------
+     Larger, softer cards; everything interactive is a pill. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+
+  /* ---- typography ----------------------------------------------------------
+     Inter if the OS has it, else the platform UI face (SF / Segoe), which sit
+     close enough to the reference's grotesk. No webfont: the app runs offline
+     and a blocked font request would flash unstyled text. */
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  /* ONE ROLE PER STEP — keep it that way. Two sizes for the same role is the
+     fastest way back to a page that looks accidental:
+       2xl  page title (h1)                 md    sub-heading, section label
+       xl   page h2, headline stat          base  body text, controls
+       lg   card + prose heading (h2/h3)    sm    secondary text, dense lists
+                                            xs    captions, badges
+                                            2xs   micro labels only          */
+  --text-2xs:  0.625rem;    /* 10 — micro labels only (step index, tag close) */
+  --text-xs:   0.6875rem;   /* 11 */
+  --text-sm:   0.75rem;     /* 12 */
+  --text-base: 0.875rem;    /* 14 */
+  --text-md:   1rem;        /* 16 */
+  --text-lg:   1.25rem;     /* 20 */
+  --text-xl:   1.5rem;      /* 24 */
+  --text-2xl:  1.875rem;    /* 30 */
+  --leading:   1.6;
+  --leading-tight: 1.15;
+  --tracking-tight: -0.022em;   /* headings: set tight, like the reference */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+
+  /* ---- elevation -----------------------------------------------------------
+     Near-flat by design: structure comes from hairline borders, not shadow.
+     Shadows are reserved for things that genuinely float (modals, sticky bars). */
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 6px 20px rgba(16, 24, 40, 0.07),
+               0 1px 3px rgba(16, 24, 40, 0.05);
+  --shadow-lg: 0 24px 56px rgba(16, 24, 40, 0.14);
+
+  /* ---- motion ------------------------------------------------------------- */
+  --transition-fast: 120ms ease;
+  --transition:      180ms ease;
+
+  /* ---- semantic surface + text (LIGHT theme defaults) --------------------- */
+  --bg:          #f4f5f6;   /* app canvas                */
+  --surface:     #ffffff;   /* cards, panels             */
+  --surface-2:   #f5f6f8;   /* insets, inputs, code      */
+  --surface-3:   #ebedf0;   /* hover fills               */
+  --border:      #e8eaed;   /* hairlines                 */
+  --border-strong: #d6d9de;
+  --text:        #14181f;   /* primary text              */
+  --text-muted:  #6a7280;   /* secondary text            */
+  --text-subtle: #9aa1ac;   /* tertiary / captions       */
+  --link:        var(--brand);
+  --focus-ring:  0 0 0 3px color-mix(in srgb, var(--brand) 28%, transparent);
+
+  /* ---- status palette (each: line / text / soft fill) --------------------- */
+  --ok:        #067647;  --ok-text:   #067647;  --ok-soft:   #ecfdf3;
+  --warn:      #b54708;  --warn-text: #b54708;  --warn-soft: #fffaeb;
+  --danger:    #d92d20;  --danger-text:#b42318; --danger-soft:#fef3f2;
+  --info:      #175cd3;  --info-text: #175cd3;  --info-soft: #eff8ff;
+}
+
+/* ---- DARK theme: system preference, unless overridden by [data-theme] ----- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --brand:          #ff5a4d;
+    --brand-strong:   #ff7a70;
+    --brand-soft:     #2a1513;
+    --brand-contrast: #ffffff;
+
+    --bg:          #0c0e12;
+    --surface:     #14181e;
+    --surface-2:   #1b2027;
+    --surface-3:   #242a33;
+    --border:      #262c35;
+    --border-strong:#39414c;
+    --text:        #e9ecf1;
+    --text-muted:  #98a1af;
+    --text-subtle: #6b7482;
+    --link:        var(--brand);
+    --focus-ring:  0 0 0 3px color-mix(in srgb, var(--brand) 32%, transparent);
+
+    --ok:   #75e0a7; --ok-text:  #75e0a7; --ok-soft:  rgba(53,194,107,.12);
+    --warn: #fdd074; --warn-text:#fdd074; --warn-soft:rgba(224,179,65,.12);
+    --danger:#f97066;--danger-text:#f97066;--danger-soft:rgba(226,80,74,.12);
+    --info: #84caff; --info-text:#84caff; --info-soft:rgba(90,169,230,.12);
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.35);
+    --shadow-md: 0 6px 20px rgba(0,0,0,.45);
+    --shadow-lg: 0 24px 56px rgba(0,0,0,.6);
+  }
+}
+
+/* ---- explicit theme override via the toggle (wins over system) ----------- */
+:root[data-theme="dark"] {
+  --brand:#ff5a4d; --brand-strong:#ff7a70; --brand-soft:#2a1513; --brand-contrast:#fff;
+  --bg:#0c0e12; --surface:#14181e; --surface-2:#1b2027; --surface-3:#242a33;
+  --border:#262c35; --border-strong:#39414c;
+  --text:#e9ecf1; --text-muted:#98a1af; --text-subtle:#6b7482; --link:var(--brand);
+  --focus-ring:0 0 0 3px color-mix(in srgb, var(--brand) 32%, transparent);
+  --ok:#75e0a7; --ok-text:#75e0a7; --ok-soft:rgba(53,194,107,.12);
+  --warn:#fdd074; --warn-text:#fdd074; --warn-soft:rgba(224,179,65,.12);
+  --danger:#f97066; --danger-text:#f97066; --danger-soft:rgba(226,80,74,.12);
+  --info:#84caff; --info-text:#84caff; --info-soft:rgba(90,169,230,.12);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35);
+  --shadow-md:0 6px 20px rgba(0,0,0,.45);
+  --shadow-lg:0 24px 56px rgba(0,0,0,.6);
+}

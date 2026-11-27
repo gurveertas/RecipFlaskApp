@@ -1,0 +1,277 @@
+{# Review panels: the QA + REACS checklists plus the per-issue targeted fix.
+
+   One macro shared by studio/article.html and admin/article_detail.html —
+   they showed the same two panels from two near-identical copies, which is
+   exactly how the checkbox markup and the "unfixable" list drifted apart
+   once already. Anything about how a check is displayed or selected belongs
+   here and nowhere else.
+
+   `fix_url` is the blueprint's own fix endpoint, so each page posts to its
+   own route and redirects back to itself. #}
+
+{# The checks no article's rewrite can clear. A route may pass a WIDER,
+   per-article list (webapp/pipeline.py's unfixable_checks): vendor_grounding
+   is unfixable when the article cites no source on the vendor's own domain,
+   and fixable when one is there, so it cannot be decided here. #}
+{% set UNFIXABLE_DEFAULT = ['instructor_byline', 'single_search_intent', 'serp_competitiveness'] %}
+
+{% macro review_panels(article, fix_url, reacs_ready, publish_ready, rescore_url=none, unfixable=none) %}
+  {% set UNFIXABLE = unfixable if unfixable is not none else UNFIXABLE_DEFAULT %}
+  {% set qa = article.qa_checks or [] %}
+  {% set reacs = article.reacs_report or [] %}
+  {# -1 is the "never computed" sentinel, so articles written before QA
+     scoring existed show the checklist without a meaningless 0/100. #}
+  {% set qa_ready = article.qa_score is not none and article.qa_score >= 0 %}
+  {% set n_block = (qa|selectattr('status', 'equalto', 'fail')|list|length)
+                 + (reacs|rejectattr('passed')|selectattr('tier', 'equalto', 'mandatory')|list|length) %}
+  {% set n_soft  = (qa|selectattr('status', 'equalto', 'warn')|list|length)
+                 + (reacs|rejectattr('passed')|rejectattr('tier', 'equalto', 'mandatory')|list|length) %}
+  {% set n_pass  = (qa|selectattr('status', 'equalto', 'pass')|list|length)
+                 + (reacs|selectattr('passed')|list|length) %}
+
+  <form method="post" action="{{ fix_url }}" data-review
+        data-busy="Fixing the selected issues — one targeted pass, then full QA + REACS"
+        data-busy-hint="Usually 20–40 seconds">
+
+    {% if qa %}
+      {% if publish_ready %}
+        <div class="verdict verdict--ok"><span class="verdict__icon">&#10003;</span>
+          <span>Publish candidate &mdash; QA and REACS both passed</span></div>
+      {% else %}
+        <div class="verdict verdict--blocked"><span class="verdict__icon">&#10007;</span>
+          <span>Blocked &mdash; not a publish candidate
+            {%- if not article.qa_passed %} (QA){% endif -%}
+            {%- if reacs_ready and not article.reacs_passed %} (REACS){% endif -%}
+            {%- if not reacs_ready %} (REACS not yet scored &mdash; rewrite to compute it){% endif -%}
+          </span></div>
+      {% endif %}
+
+      {# Four identical stat tiles — same number size, same label size — so
+         the eye reads them as one row of comparable figures rather than a
+         headline with footnotes. #}
+      <div class="card"><div class="card__body">
+        <div class="review-stats">
+          {% if qa_ready %}
+          {# Colour comes from qa_score_band, never from the number alone: a
+             single integrity failure still scores ~91, and a green 91 beside
+             a blocked draft would contradict the verdict banner above. #}
+          <div class="review-stat">
+            <div class="review-stat__value review-stat__value--{{ {'pass':'ok','warn':'soft','fail':'block'}[article.qa_score_band] }}">{{ article.qa_score }}</div>
+            <div class="review-stat__label">Reliability QA</div>
+          </div>
+          {% endif %}
+          {% if reacs_ready %}
+          <div class="review-stat">
+            <div class="review-stat__value {{ 'review-stat__value--ok' if article.reacs_passed else 'review-stat__value--block' }}">{{ article.reacs_score }}</div>
+            <div class="review-stat__label">REACS &middot; pass &ge;{{ REACS_THRESHOLD }}</div>
+          </div>
+          {% endif %}
+          <div class="review-stat">
+            <div class="review-stat__value{{ ' review-stat__value--block' if n_block }}">{{ n_block }}</div>
+            <div class="review-stat__label">Blocking</div>
+          </div>
+          <div class="review-stat">
+            <div class="review-stat__value{{ ' review-stat__value--soft' if n_soft }}">{{ n_soft }}</div>
+            <div class="review-stat__label">Advisory</div>
+          </div>
+          <div class="review-stat">
+            <div class="review-stat__value">{{ n_pass }}</div>
+            <div class="review-stat__label">Passing</div>
+          </div>
+        </div>
+        {# Two meters now, so each one states which engine it belongs to —
+           an unlabelled pair would be unreadable. #}
+        {% if qa_ready %}
+        <div class="review-meter-row">
+          <div class="review-meter-row__name">Reliability QA</div>
+          <div class="review-meter" role="img" aria-label="Reliability QA score {{ article.qa_score }} of 100">
+            <div class="review-meter__fill review-meter__fill--{{ {'pass':'ok','warn':'soft','fail':'block'}[article.qa_score_band] }}"
+                 style="width:{{ article.qa_score }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+        {% if reacs_ready %}
+        <div class="review-meter-row">
+          <div class="review-meter-row__name">REACS</div>
+          <div class="review-meter" role="img" aria-label="REACS score {{ article.reacs_score }} of 100">
+            <div class="review-meter__fill {{ 'review-meter__fill--ok' if article.reacs_passed else 'review-meter__fill--block' }}"
+                 style="width:{{ article.reacs_score }}%"></div>
+          </div>
+        </div>
+        {% endif %}
+        <div class="review-filters" role="group" aria-label="Filter checks">
+          <button type="button" class="filter-tab filter-tab--active" data-filter="todo">
+            Needs attention ({{ n_block + n_soft }})</button>
+          <button type="button" class="filter-tab" data-filter="pass">Passing ({{ n_pass }})</button>
+          <button type="button" class="filter-tab" data-filter="all">All ({{ n_block + n_soft + n_pass }})</button>
+        </div>
+      </div></div>
+
+      <div class="card" data-panel><div class="card__body">
+        <div class="section-label">Reliability QA</div>
+        <div class="checklist checklist--review">
+          {% for c in qa %}
+            {{ _row(c.name, c.status, c.detail, 'qa', c.status == 'pass',
+                    c.status == 'fail', c.name in UNFIXABLE, none,
+                    tried=(article.unresolved_fixes or {}).get(c.name, 0)) }}
+          {% endfor %}
+        </div>
+      </div></div>
+    {% endif %}
+
+    {% if reacs_ready %}
+      <div class="card" data-panel><div class="card__body">
+        <div class="section-label">REACS &mdash; AI Content Standard</div>
+        {% if article.byline_instructor and article.byline_instructor.name %}
+        <p class="text-muted" style="margin-top:var(--space-2);font-size:var(--text-sm)">
+          Byline: Technically reviewed by {{ article.byline_instructor.name }}, {{ article.byline_instructor.credentials }}
+        </p>
+        {% endif %}
+        <div class="checklist checklist--review" style="margin-top:var(--space-3)">
+          {% for c in reacs %}
+            {{ _row(c.pillar.replace('_', ' '), 'pass' if c.passed else ('fail' if c.tier == 'mandatory' else 'warn'),
+                    c.message, 'reacs', c.passed, c.tier == 'mandatory',
+                    c.pillar in UNFIXABLE, c.tier, c.pillar,
+                    tried=(article.unresolved_fixes or {}).get(c.pillar, 0)) }}
+          {% endfor %}
+        </div>
+      </div></div>
+    {% endif %}
+
+    {% if n_block or n_soft %}
+    <div class="review-bar" data-review-bar>
+      <span class="review-bar__count"><b data-picked>0</b> of {{ n_block + n_soft }} selected</span>
+      <span class="review-bar__actions">
+        <button type="button" class="btn btn--sm btn--ghost" data-pick="block">Blocking</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-pick="todo">All</button>
+        <button type="button" class="btn btn--sm btn--ghost" data-pick="none">Clear</button>
+        <button type="submit" class="btn btn--sm btn--primary" data-submit disabled>Fix selected</button>
+      </span>
+    </div>
+    {% endif %}
+  </form>
+
+  {% if rescore_url and article.qa_checks %}
+    {# Outside the fix form on purpose — this is not one of the selectable
+       actions, and nesting a form inside another is invalid HTML anyway.
+       Kept next to the scores because that is what it changes. #}
+    <form method="post" action="{{ rescore_url }}" class="review-rescore"
+          data-busy="Re-scoring against the current checks"
+          data-busy-hint="No AI call — usually a second or two">
+      <button type="submit" class="btn btn--sm btn--ghost">Re-score</button>
+      <span class="proofread__status">
+        Re-runs both gates on the article exactly as it is &mdash; no AI call,
+        no change to the text. Use it when the checks themselves have changed
+        and these scores predate them.
+      </span>
+    </form>
+  {% endif %}
+{% endmacro %}
+
+
+{# One check row. Always emits all three grid cells (control, badge, text) —
+   a row that skipped the empty control cell shifted its badge and copy left
+   against every neighbouring row. Passing rows, and rows a rewrite can't
+   touch, get an empty first cell instead of a checkbox: ticking those would
+   spend an LLM call that provably changes nothing (see webapp/pipeline.py's
+   UNFIXABLE_BY_REWRITE). #}
+{% macro _row(name, status, detail, field, is_pass, is_block, locked, tier, value=none, tried=0) %}
+  {% set state = 'pass' if is_pass else ('block' if is_block else 'soft') %}
+  {% set body %}
+    <div class="check__name">{{ name }}
+      {%- if tier %} <span class="text-muted" style="font-weight:var(--weight-normal)">({{ tier }})</span>{% endif %}
+      {%- if locked and not is_pass %}<span class="check__lock">not fixable by rewriting</span>{% endif %}
+      {#- A check already targeted and still failing. Shown BEFORE the spend,
+          because the flash afterwards only helps the person who already paid.
+          Three attempts on one check went unnoticed for exactly this
+          reason. -#}
+      {%- if tried and not is_pass %}<span class="check__lock">did not clear
+        {{ 'last time' if tried == 1 else tried ~ ' attempts running' }}</span>{% endif %}</div>
+    {% if detail %}<div class="check__detail">{{ detail }}</div>{% endif %}
+  {% endset %}
+
+  {% if is_pass or locked %}
+    <div class="check {{ 'check--locked' if locked and not is_pass }}" data-state="{{ state }}">
+      <span aria-hidden="true"></span>
+      <span class="badge badge--{{ status }} check__badge">{{ status.upper() }}</span>
+      <div>{{ body }}</div>
+    </div>
+  {% else %}
+    <label class="check check--pick{{ ' is-picked' if is_block }}" data-state="{{ state }}">
+      <input type="checkbox" class="check__box" name="{{ field }}"
+             value="{{ value or name }}" {{ 'checked' if is_block }}>
+      <span class="badge badge--{{ status }} check__badge">{{ status.upper() }}</span>
+      <div>{{ body }}</div>
+    </label>
+  {% endif %}
+{% endmacro %}
+
+
+{% macro review_script() %}
+<script>
+(function () {
+  var form = document.querySelector("form[data-review]");
+  if (!form) return;
+  var boxes  = Array.prototype.slice.call(form.querySelectorAll(".check__box"));
+  var rows   = Array.prototype.slice.call(form.querySelectorAll(".check[data-state]"));
+  var picked = form.querySelector("[data-picked]");
+  var submit = form.querySelector("[data-submit]");
+
+  function sync() {
+    var n = 0;
+    boxes.forEach(function (b) {
+      if (b.checked) n++;
+      b.closest(".check").classList.toggle("is-picked", b.checked);
+    });
+    if (picked) picked.textContent = n;
+    // Nothing ticked means nothing to do — the server rejects it anyway, so
+    // don't let the click cost a round trip.
+    if (submit) {
+      submit.disabled = n === 0;
+      submit.textContent = n ? "Fix " + n + " selected" : "Fix selected";
+    }
+  }
+
+  form.addEventListener("change", function (e) {
+    if (e.target.classList.contains("check__box")) sync();
+  });
+
+  form.addEventListener("click", function (e) {
+    var pick = e.target.closest("[data-pick]");
+    if (pick) {
+      var mode = pick.getAttribute("data-pick");
+      boxes.forEach(function (b) {
+        var st = b.closest(".check").getAttribute("data-state");
+        b.checked = mode === "todo" ? true
+                  : mode === "block" ? st === "block"
+                  : false;
+      });
+      sync();
+      return;
+    }
+    var tab = e.target.closest("[data-filter]");
+    if (!tab) return;
+    var want = tab.getAttribute("data-filter");
+    form.querySelectorAll("[data-filter]").forEach(function (t) {
+      t.classList.toggle("filter-tab--active", t === tab);
+    });
+    rows.forEach(function (r) {
+      var st = r.getAttribute("data-state");
+      var show = want === "all" || (want === "pass" ? st === "pass" : st !== "pass");
+      r.classList.toggle("is-hidden", !show);
+    });
+    // A panel whose rows are all filtered out is just a stray heading.
+    form.querySelectorAll("[data-panel]").forEach(function (p) {
+      var any = Array.prototype.slice.call(p.querySelectorAll(".check[data-state]"))
+                 .some(function (r) { return !r.classList.contains("is-hidden"); });
+      p.classList.toggle("is-hidden", !any);
+    });
+  });
+
+  // Default view is "needs attention": hide passing rows on load.
+  var initial = form.querySelector('[data-filter="todo"]');
+  if (initial) initial.click();
+  sync();
+})();
+</script>
+{% endmacro %}

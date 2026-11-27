@@ -1,0 +1,47 @@
+{# Busy overlay for synchronous AI actions. Include once, just before
+   </body>, on any page with forms marked:
+     <form data-busy="Label shown while working"
+           data-busy-hint="Optional expected-duration line" ...>
+   On submit: overlay + animated (indeterminate) progress bar appear and the
+   form's submit buttons are disabled — which also prevents double-submits
+   that would burn LLM/Serper quota twice. The redirect that ends every one
+   of these POSTs naturally replaces the page; the pageshow handler covers
+   the browser back/bfcache case where the old page (overlay visible) would
+   otherwise be restored. #}
+<div class="busy-overlay" id="busyOverlay" hidden role="status" aria-live="polite">
+  <div class="busy">
+    <div class="busy__label" id="busyLabel">Working…</div>
+    <div class="busy__bar"><div class="busy__fill"></div></div>
+    <div class="busy__hint" id="busyHint" hidden></div>
+  </div>
+</div>
+<script>
+  (function () {
+    var overlay = document.getElementById("busyOverlay");
+    var label = document.getElementById("busyLabel");
+    var hint = document.getElementById("busyHint");
+    document.querySelectorAll("form[data-busy]").forEach(function (form) {
+      form.addEventListener("submit", function () {
+        label.textContent = form.dataset.busy || "Working…";
+        if (form.dataset.busyHint) {
+          hint.textContent = form.dataset.busyHint;
+          hint.hidden = false;
+        } else {
+          hint.hidden = true;
+        }
+        overlay.hidden = false;
+        form.querySelectorAll('button[type="submit"]').forEach(function (b) {
+          b.disabled = true;
+        });
+      });
+    });
+    // Back-button restore from bfcache: hide the stale overlay + re-enable.
+    window.addEventListener("pageshow", function (e) {
+      if (e.persisted) {
+        overlay.hidden = true;
+        document.querySelectorAll('form[data-busy] button[type="submit"]')
+          .forEach(function (b) { b.disabled = false; });
+      }
+    });
+  })();
+</script>

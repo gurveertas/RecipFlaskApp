@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guide — Blog Generator</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">How to use this tool</div>
+        <div class="app-header__subtitle">Research &rarr; verify &rarr; write &rarr; QA &rarr; publish</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      <div class="page-head">
+        <div class="page-head__eyebrow">Guide</div>
+        <h1 class="page-head__title">How to use this tool</h1>
+        <p class="page-head__sub">What the pipeline does, what each Article Studio step means, and what every
+          QA and REACS check verifies — jump to any section from the list on the left.</p>
+      </div>
+
+      <div class="app-grid guide-layout">
+        <nav class="guide-toc" aria-label="Guide sections">
+          <a class="guide-toc__link" href="#what-this-is">What this tool is</a>
+          <a class="guide-toc__link" href="#blog-generator">Blog Generator (quick draft)</a>
+          <a class="guide-toc__link" href="#article-studio">Article Studio — the 6 steps</a>
+          <a class="guide-toc__link" href="#qa-checks">The QA checks</a>
+          <a class="guide-toc__link" href="#reacs">REACS — AI Content Standard</a>
+          <a class="guide-toc__link" href="#vendors">Manage vendors</a>
+          <a class="guide-toc__link" href="#allowlist-gaps">Allowlist gaps</a>
+          <a class="guide-toc__link" href="#data-freshness">Where the numbers come from</a>
+          <a class="guide-toc__link" href="#usage-costs">Usage &amp; costs</a>
+          <a class="guide-toc__link" href="#tips">Tips</a>
+        </nav>
+
+        <div class="stack guide">
+
+          <section id="what-this-is" class="card guide-section"><div class="card__body">
+            <div class="section-label">What this tool is</div>
+            <p>An AI content pipeline that produces <b>verified, cited, QA-gated blog articles</b>
+            for rededucation.com. The model never invents facts: every article is grounded in
+            sources retrieved live, every statistic must trace to a source, and nothing reaches
+            WordPress until automated QA passes. Article Studio researches only the trusted-domain
+            allowlist and also requires the REACS AI-search-visibility standard; Quick draft uses
+            the open web only when nothing on that list covers the topic.</p>
+            <p style="margin-bottom:0">There are two ways to generate:</p>
+            <ul style="margin-bottom:0">
+              <li><b>Blog Generator</b> (the home page) — a quick draft on any topic. Nothing is saved to the database; a finished draft is held for one hour so you can rewrite a section, proofread it or send it to WordPress. Good for one-offs and topics outside the vendor catalogue.</li>
+              <li><b>Article Studio</b> — the governed 6-step flow (Vendor &rarr; Topic &rarr; Brief &rarr; Article &rarr; Preview &rarr; Publish). Everything is saved, scored, and quality-gated. This is the main path.</li>
+            </ul>
+          </div></section>
+
+          <section id="blog-generator" class="card guide-section"><div class="card__body">
+            <div class="section-label">Blog Generator (quick draft)</div>
+            <ul style="margin-bottom:0">
+              <li><b>Topic</b> — free text, anything. In Live mode it drives the research: the trusted domains first, and the open web only when nothing on that list ranks for the topic, so an IT subject is still researched from the curated sources. Naming the vendor helps ("Palo Alto Panorama management" beats "centralised management").</li>
+              <li><b>Keywords</b> (optional, up to 8) — press Enter/comma after each. Every keyword must appear <i>verbatim</i> in the draft; the QA harness checks this mechanically.</li>
+              <li><b>Region</b> (optional) — localises salary/market context where sources support it.</li>
+              <li><b>Demo vs Live</b> — Demo uses bundled sample sources and a deterministic writer (free, instant, no keys), so its topic is fixed to the sample. Live searches the web, verifies claims, and writes with the LLM.</li>
+              <li>Results stream step-by-step; download as <code>.md</code>/<code>.json</code> or copy. Drafts are <b>not saved</b> — use Studio for anything you want to keep.</li>
+              <li><b>Its own QA standard.</b> A Quick draft goes through the same Reliability QA for grounding, citations, originality, spelling and attribution, with a 600-word floor and a 900&ndash;2,100-word target instead of Studio's 1,300 and 1,500&ndash;2,100. A Red Education course link is only asked for when the topic is one of ours. See <a href="#qa-checks">The QA checks</a>.</li>
+              <li><b>The finished draft is held for one hour</b> so the tools under it work: <b>Rewrite section</b> (pick an H2, optionally add an instruction; QA re-runs on the result) and <b>Proofread</b> (advisory wording suggestions, which you apply yourself). Both are offered whatever the QA verdict. After the hour, generate it again.</li>
+              <li><b>Send to WordPress</b> appears only when Reliability QA passes. It creates a <b>draft</b> post, never a live one. A Quick draft has no vendor and no reviewing instructor, so no category and no &ldquo;Technically reviewed by&rdquo; line are set &mdash; add a category in WordPress before publishing. Sending the same draft twice is refused, because it would create a duplicate.</li>
+            </ul>
+          </div></section>
+
+          <section id="article-studio" class="card guide-section"><div class="card__body">
+            <div class="section-label">Article Studio — the 6 steps</div>
+
+            <h3>Step 1 · Vendor</h3>
+            <ul>
+              <li>Cards are sorted by <b>priority</b> (P1 highest). Priority is set in Manage vendors and does two things: it <b>enables topic generation</b> and it weights topic scoring (higher-priority vendors score higher).</li>
+              <li>Each card separates two things. <b>live on rededucation.com</b> — how many published pages already cover that vendor, from the site scrape; the quickest read on where coverage exists and where it doesn't (a post covering two vendors counts for both). The line under the vendor list says how fresh that count is — see <a href="#data-freshness">Where the numbers come from</a>. Then <b>in this tool</b>, split into mutually exclusive stages that add up to the total: <b>in brief</b> (never written), <b>needs fixes</b> (written, QA or REACS holding it), <b>ready</b> (both gates passed, not sent), <b>awaiting publish</b> (a draft is sitting in WordPress), <b>live</b> (someone has published it).</li>
+              <li>The footer line is about brief quality, not article readiness: <b>Open opportunity</b> means the vendor has a priority and knowledge-base data but no coverage on the site yet.</li>
+              <li>A <b>Research only</b> card has no commercial priority. Its source domain and historical coverage stay available for factual research, but topic generation, new briefs, article writing and WordPress pushes are blocked server-side. Set a priority only for a current commercial vendor.</li>
+              <li><b>Purge all topics &amp; articles</b> deletes every topic idea and every article in this tool, across <i>all</i> vendors, after a confirmation showing both counts. It cannot be undone. Vendors, certifications, courses and instructors are kept, and drafts already in WordPress are not touched.</li>
+            </ul>
+
+            <h3>Step 2 · Topic</h3>
+            <ul>
+              <li><b>Count</b> (5/10/15) — how many ideas to generate. <b>Theme</b> (optional) — steer the batch, e.g. "zero trust".</li>
+              <li>What happens on Generate: the LLM <i>proposes</i> ideas and estimates raw dimensions; a deterministic formula (commercial 40% / SEO 25% / AI-visibility 20% / vendor-alignment 15%, minus difficulty) <i>decides</i>. The model never decides.</li>
+              <li><b>Difficulty is measured, not guessed</b>: each keyword's live Google top-10 is analysed (authority domains, exact-title matches) and replaces the LLM's estimate before scoring. Costs ~1 Serper credit per idea.</li>
+              <li><b>Score badge</b>: &ge;65 &rarr; <b>create</b> (approved), &ge;45 &rarr; <b>parked</b>, below &rarr; <b>rejected</b>. You can override by clicking "Approve &amp; create brief" on a parked topic.</li>
+              <li><b>gap / overlap</b> lane: every idea is checked against real published rededucation.com posts. <b>gap</b> = nothing similar exists (good). <b>overlap</b> = a close match already ranks — linked so you can judge whether to duplicate.</li>
+              <li><b>Long focus keyword</b> warning: a keyword over ~40 characters or 5 words can't fit an SEO title (which caps at 60), so Rank Math scores the page badly no matter how good the article is. It's a warning, not a block — but it's much cheaper to reword the keyword here than after it has propagated into the brief, title, slug and SEO title.</li>
+              <li><b>Create brief</b> runs live research for that topic and drafts the brief. It refuses in two distinct cases, and the message says which: <b>no usable sources at all</b> (the search is restricted to this vendor's allowlisted domains, so a very specific topic can match nothing), or <b>sources that don't mention the subject</b> — writing then would produce a confident article about something else. If a reputable missing source appeared in the open-web comparison search, review it in <a href="#allowlist-gaps">Allowlist gaps</a> before trying again.</li>
+              <li><b>Ideas that already have work</b> show how far they got, using the same stages as the vendor card: <b>brief</b> (created, not written yet), <b>needs fixes</b> or <b>ready</b> (with word count, QA and REACS scores), <b>awaiting publish</b> (a draft is sitting in WordPress, with a link to open it) and <b>live</b> (the publish date and a link to the post). Their button becomes <b>View brief</b> or <b>View article</b>: each idea holds one article, so it can't be briefed twice.</li>
+              <li><b>Remove</b> takes an unwanted idea off the vendor's list after a confirmation. An idea that already has a brief or article is refused rather than deleted along with that work.</li>
+            </ul>
+
+            <h3>Step 3 · Brief</h3>
+            <ul>
+              <li>The brief is the editorial contract the writer must follow. Every field is editable — edit here and <b>Save brief</b>, not after writing.</li>
+              <li><b>Title</b> — the article title, up to 120 characters. The hint underneath says which of Rank Math's four title checks the saved title fails, if any.</li>
+              <li><b>Keyword</b> — the SEO target. Checked as an <i>exact substring</i> in the final article, and used as the search query for research. Changing it changes what gets retrieved.</li>
+              <li><b>Outline</b> — one H2 heading per line, in order. The article will follow it.</li>
+              <li><b>Key points</b> — one per line; specific claims/angles the article must make.</li>
+              <li><b>CTA intent</b> — a steer for the closing call-to-action (free text). The final CTA must still contain one of the approved brand phrases character-for-character; this field shapes the sentence around it.</li>
+              <li><b>Suggested internal links</b> — real, currently-published rededucation.com posts and course pages matched to this brief. "+ Add" makes them <i>required</i>: QA warns if the writer drops one.</li>
+              <li><b>Add your own link</b> — any http(s) URL (a course page, a landing page). Same required treatment.</li>
+              <li><b>Write article</b> — runs fresh research and injects the vendor's certifications and courses as <b>separate authoritative lists</b>, plus an approved menu of real internal pages to link. The same entity contract reaches the brief, full write, targeted fixes and section rewrites. It forbids treating a course as a credential, unsupported prerequisites/renames/logistics, stale promotions, unattributed house advice and unexplained cross-vendor recommendations. Writing gets up to 3 attempts; failed QA checks feed targeted fixes into each retry. Takes 1&ndash;3 minutes.</li>
+            </ul>
+
+            <h3>Step 4 · Article</h3>
+            <ul>
+              <li>The verdict banner is the headline: <b>Publish candidate</b> needs BOTH QA and REACS to pass; <b>Blocked</b> names which gate(s) failed. WARNs never block — they're reviewer attention items.</li>
+              <li>Both gates now carry a <b>0&ndash;100 score</b> shown side by side, on the same weighting so they read on comparable terms (integrity/mandatory 60, advisory 40; a WARN takes half credit). The QA score <i>grades</i> quality &mdash; it does not gate: <b>qa_passed is still "nothing failed"</b>. A blocked draft never shows a green score, because a single failure among many checks still scores high, and green next to a blocked verdict would contradict it.</li>
+              <li>The <b>Reliability QA</b> and <b>REACS</b> panels list every check, filterable by "Needs attention" / "Passing" / "All". REACS is a second, separate gate — see below — with its own score and pass/fail per pillar.</li>
+              <li><b>Fix selected</b> — tick the specific checks you want fixed and leave the rest; <b>Blocking</b>, <b>All</b> and <b>Clear</b> set the ticks in one click. Blocking issues (FAIL / mandatory) start ticked; WARNs and advisories don't, since those are often a deliberate call. Grounded in the article's own sources. <b>Use this first.</b>
+                <ul>
+                  <li>Mechanical problems &mdash; Australian spelling, vendor and acronym casing, a paragraph that ended up inside a heading &mdash; are corrected directly, with no AI call.</li>
+                  <li>The rest goes to the AI as numbered paragraphs, and it returns a list of edits. A paragraph it doesn't name is not rewritten at all, and any edit that breaks a check which was passing is dropped.</li>
+                  <li>Normally 1 AI call, up to 3 when a fix and a regression sit in the same sentences. If the result would leave the article unpublishable, the whole attempt is discarded and the article stays as it was.</li>
+                  <li>A check that has already resisted a fix is labelled <b>did not clear last time</b> (or how many attempts are running), so you can see that before spending another call on it.</li>
+                </ul></li>
+              <li><b>Re-score</b> — re-runs both gates against the article exactly as it stands. No AI call and no search credits: it reads the article's own saved sources. Use it after a manual edit, or when a finding quotes text that is no longer in the article. REACS always re-runs; if a source page can't be read again, the QA half is skipped and the message says so, rather than leaving an old score looking current.</li>
+              <li><b>Proofread the body</b> — one AI read for wording problems the deterministic checks can't judge. Advisory: it never blocks. Each suggestion quotes the exact text it would change; tick the ones you want and apply them. Applying is an exact text swap with no AI call, so nothing else in the sentence moves, and both gates are re-scored. A suggestion whose text has changed since is skipped and marked &mdash; proofread again to refresh it.</li>
+              <li><b>Edit the article yourself</b> — the escape hatch for when the automated fixes can't do it. Opens the body markdown, the title, both meta fields and the FAQ for direct editing. What you type is saved exactly as typed, with no AI call and no search credits, and both gates are re-scored immediately, so the panels always describe the text that is actually there. Nothing is refused at the form: an edit that breaks a check shows up as that check failing. Keep each <code>[S#]</code> marker on the sentence it supports, and if a draft is already in WordPress, remember this changes only the copy in this tool.</li>
+              <li>An <b>instructor byline</b> ("Technically reviewed by &hellip;") is auto-assigned on first write, but <b>only to an instructor certified for this article's vendor</b>. Where several qualify the least-used is picked, so bylines rotate. A vendor with <b>no</b> certified instructor falls back to the full roster, rotated the same way, so every article carries a byline. The credential line always lists the vendors that instructor genuinely holds. This is not a gate: nothing blocks on it.</li>
+              <li><b>References</b> — the numbered [S#] sources the article cites. These are the actual pages the facts came from.</li>
+              <li><b>Rewrite one section</b> — pick an H2, optionally give an instruction ("add the exam cost", "link to &lt;url&gt;"). One LLM call, ~10s, citations preserved, full QA + REACS re-run. For edits no check has flagged.</li>
+              <li><b>Rewrite whole article</b> — full research + write + QA cycle. Use when the article is structurally wrong, not for small fixes.</li>
+              <li><b>Download PDF</b> — available at any stage, findings or not: the article in rededucation.com's formatting (as on the Preview step, with every FAQ answer expanded), the numbered references on a new page, and a <b>Quality report</b> with both verdicts and scores, every QA check and REACS pillar with its detail, and the article's parameters.</li>
+              <li><b>Continue to Preview</b> appears only when QA <i>and</i> REACS both pass. An article written before REACS existed shows "not yet scored" rather than a false failure — any rewrite (even a single section) computes it.</li>
+            </ul>
+
+            <h3>Step 5 · Preview</h3>
+            <ul>
+              <li>The article rendered in <b>rededucation.com's own article formatting</b> &mdash; type sizes, colours, table styling and the FAQ accordion were measured from live published posts, not approximated. This is the last point where a formatting problem is cheap to fix.</li>
+              <li><b>Desktop / Tablet / Mobile</b> narrow the text column exactly as the live one does, so a wide comparison table that overflows on a phone overflows here too.</li>
+              <li>The FAQ renders as the site's <b>accordion</b>, identified from the article's stored FAQ data rather than by guessing at headings. If a draft has no FAQ section the page says so instead of inventing one.</li>
+              <li>The [S#] citation markers are <b>not shown</b> here, because they are not published either &mdash; they exist so QA can verify every claim traces to a source. The Article step still shows them.</li>
+              <li>What it can't show: site header, footer, sidebar, related-posts strip and the hero image &mdash; those come from the WordPress theme at publish time.</li>
+            </ul>
+
+            <h3>Step 6 · Publish</h3>
+            <ul>
+              <li><b>Creates a draft in WordPress. It never publishes live</b> &mdash; the status is hard-coded and re-checked before sending, so going live stays a human action in WordPress.</li>
+              <li><b>QA and REACS are re-run immediately before the push</b>. A green verdict stored under older rules cannot bypass a control added later, and a draft whose saved sources can no longer be rebuilt is stopped for review.</li>
+              <li><b>What will be sent</b> lists every field with its status. Title, slug, body, excerpt, SEO title/description, author and category are filled automatically. <b>Featured image</b> is attached by an editor by hand. <b>Tags</b> are not sent.</li>
+              <li>Posts are authored by a single configured WordPress account, and the category comes from the vendor &mdash; a direct lookup, not an AI guess.</li>
+              <li><b>Exact payload (dry run)</b> shows the complete request body without contacting WordPress, including the JSON-LD schema (Article + FAQPage) and the inline table styling that makes generated tables match hand-written posts.</li>
+              <li>After pushing, the card becomes a receipt with <b>Edit in WordPress</b>. That opens the wp-admin editor, not a public URL: <b>a draft has no public address</b> &mdash; visiting one logged out returns the site's 404.</li>
+              <li>Pushing twice is blocked while the draft exists (it would duplicate, not update). Delete the draft in WordPress and the article becomes pushable again.</li>
+            </ul>
+          </div></section>
+
+          <section id="qa-checks" class="card guide-section"><div class="card__body">
+            <div class="section-label">The QA checks — what each one means</div>
+            <p><b>FAIL blocks publishing</b> and triggers a rewrite attempt. <b>WARN informs</b> — the article still passes.</p>
+            <p>The "Can fail?" column is also what the QA score weighs: the checks that can fail are the <b>integrity</b> tier (60 points), the warn-only ones are <b>advisory</b> (40). Several checks are conditional — <code>keyword_coverage</code> only runs with keywords, <code>entity_coverage</code> only with vendor entities, <code>serp_competitiveness</code> only with a live SERP snapshot — so the score is calculated over the checks that actually ran, never a fixed count.</p>
+            <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th>Check</th><th>Verifies</th><th>Can fail?</th></tr></thead>
+              <tbody>
+                <tr><td><code>structure_length</code></td><td>1,500&ndash;2,100-word target; under 1,300 is a hard fail (Quick draft: 900&ndash;2,100, under 600). Also title + H2 structure.</td><td>Yes</td></tr>
+                <tr><td><code>citation_integrity</code></td><td>Every [S#] marker resolves to a real retrieved source; no orphan citations.</td><td>Yes</td></tr>
+                <tr><td><code>citation_as_prose</code></td><td>A [S#] tag is a pointer, never a word in the sentence. Tags are stripped before publishing, so &ldquo;According to [S1], the exam is 120 minutes&rdquo; reaches readers as &ldquo;According to, the exam is 120 minutes&rdquo;. The link shape <code>[S1](https://&hellip;)</code> is worse: it survives the strip and publishes as a link labelled S1. Name the source, then let the tag trail the sentence.</td><td>Yes</td></tr>
+                <tr><td><code>grounding</code></td><td>Every statistic (%, currency, CVE) appears in the source material — the hallucination guard.</td><td>Yes</td></tr>
+                <tr><td><code>flagged_leakage</code></td><td>Security claims backed only by vendor marketing don't leak into the article.</td><td>Yes</td></tr>
+                <tr><td><code>originality</code></td><td>No 10+ word run copied verbatim from any source.</td><td>Yes</td></tr>
+                <tr><td><code>course_link_cta</code></td><td>Real Red Education course link inline + an approved CTA phrase, character-for-character.</td><td>Yes</td></tr>
+                <tr><td><code>keyword_coverage</code></td><td>The target keyword appears verbatim in the body.</td><td>Yes</td></tr>
+                <tr><td><code>title_readability</code></td><td>The four Rank Math title checks, run here instead of waiting for WordPress: focus keyword near the start of the SEO title, a <b>power word</b> (Complete, Essential, Proven), a <b>sentiment word</b> (Best, Easy, Hard), and a number. Rank Math scores power and sentiment <b>separately</b>, so a title with only one of them always fails the other &mdash; which is what the brief used to ask for. Warn-only: it is title polish, and an editor fixes it in seconds.</td><td>No</td></tr>
+                <tr><td><code>writing_mechanics</code></td><td>Certification acronyms and release numbers are spelled the way the Vendor Centre spells them &mdash; <code>ccte r82</code> becomes <b>CCTE R82</b> &mdash; plus no repeated words and no space before punctuation. These are corrected automatically as the article is written, so this normally passes; a failure means something the auto-fix doesn't recognise. It never rewrites code, links or URLs. It does <b>not</b> check general grammar or spelling &mdash; that would need an AI call on every QA run, and every other check here is deterministic.</td><td>Yes</td></tr>
+                <tr><td colspan="3" style="background:var(--surface-2, #f2f4f5);font-weight:600">Factual and compliance rules (REACS v1.3 &mdash; these ask whether a claim is <i>true</i>, not whether the writing is good)</td></tr>
+                <tr><td><code>version_strings</code></td><td><b>V1.</b> Every vendor release number in the body (R81, R82&hellip;) is either recorded for a certification <b>this article is about</b>, or backed by a verbatim quote in the article's own research. A certification does <b>not</b> automatically track its vendor's latest release &mdash; Check Point ships R82 while the CCME exam is R81 &mdash; so this is checked per certification, never per vendor. Check Point only: the other vendors version their <i>products</i>, not their exams. If this blocks a publish, check the Vendor Centre before the article &mdash; a missing version is the usual cause.</td><td><b>Yes &mdash; blocks</b></td></tr>
+                <tr><td><code>named_individual</code></td><td><b>V7c.</b> No private individual is named alongside a career or employment claim. The byline instructor and Red Education staff are fine; anyone else comes out. A real article named a private person, asserted their job history and linked their professional profile, for no reader benefit.</td><td><b>Yes &mdash; blocks</b></td></tr>
+                <tr><td><code>attribution_match</code></td><td><b>V7a.</b> A claim credited to a named source cites that source's own site. "Research from Unit 42" linking to a third-party listicle fails.</td><td>Warn only</td></tr>
+                <tr><td><code>vague_attribution</code></td><td><b>V7b.</b> No uncited appeals to authority &mdash; "studies show", "experts agree" &mdash; unless the sentence carries a citation. Either cite it or cut it.</td><td>Warn only</td></tr>
+                <tr><td><code>interested_party</code></td><td><b>V8.</b> No claim rests only on a competitor's or a vendor's marketing page. That is a lead needing primary-source confirmation, not a citation.</td><td>Warn only</td></tr>
+                <tr><td><code>exam_code_presence</code></td><td><b>V2.</b> A certification article names its registration code at least once (156-836, 156-315.82&hellip;) &mdash; the string a candidate actually searches and books against. Any one of a certification's codes satisfies it. Skipped for other article types.</td><td>Warn only</td></tr>
+                <tr><td><code>promise_gaps</code></td><td><b>V4.</b> A heading promising a figure delivers one. "Exam domains and weightings" with no percentage fails; a release number is not a weighting.</td><td>Warn only</td></tr>
+                <tr><td><code>brand_casing</code></td><td><b>V5.</b> Vendor names cased correctly in the title, meta title, meta description and body. "check point" in a search snippet on an authorised partner's site is the case this exists for.</td><td>Warn only</td></tr>
+                <tr><td><code>locale_spelling</code></td><td><b>V6.</b> Australian English &mdash; enrolment, specialised, centre. Vendor product names are exempt, and so is a US spelling inside a proper noun ("AI Data Center Security Architecture").</td><td>Warn only</td></tr>
+                <tr><td><code>keyword_repetition</code></td><td><b>V9.</b> The exact keyword appears at most 4 times in the body. Past that reads as stuffing.</td><td>Warn only</td></tr>
+                <tr><td><code>corpus_consistency</code></td><td><b>V10.</b> Version claims agree with what other articles on the estate already say. Two articles contradicting each other about the same certification is worse than either being wrong alone.</td><td>Warn only</td></tr>
+                <tr><td colspan="3" style="background:var(--surface-2)"><b>Two profiles.</b> The table below is the <b>Article Studio</b> standard. <b>Quick draft</b> lowers the word floor to 600 and its target to 900&ndash;2,100. Separately, and on <i>both</i> pages, the Red Education course link is only asked for &mdash; and only checked &mdash; when the topic is one of ours, judged by whether anything on the trusted domain list actually ranked for it. A cyber topic typed into Quick draft still carries a CTA; an article about cycling does not, and is not blocked for lacking one. Grounding, citations, originality, spelling and attribution are identical under both.</td></tr>
+                <tr><td><code>entity_type</code></td><td>The article defines its own subject as the kind of thing the Vendor Knowledge Base says it is. A three-day instructor-led course described as &ldquo;a technical framework&rdquo; is wrong in the one sentence an AI assistant extracts and quotes &mdash; and on an authorised partner&rsquo;s site, publishing the wrong entity type for a vendor&rsquo;s own SKU is a partnership problem, not a wording one.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>course_credential_identity</code></td><td>Every catalogue course remains a course in the title, body, FAQ and SEO fields, including its acronym and short name. A course may prepare for a separately named credential; it is never itself a certification or exam.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>volatile_facts</code></td><td>Prerequisites, former names, course relationships, voucher claims and delivery-specific duration statements carry an exact [S#] citation in the same sentence. Promotions additionally need a verified full <b>future</b> expiry date; vague or expired offers are removed.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>technical_claim_evidence</code></td><td>Across all vendors, detected licensing rules, numerical capacity limits, configuration overwrites and release capabilities need a same-sentence citation to readable research containing the relevant topic and figures. Capacity figures must match their unit. Where vendor domains are known, the source must belong to that vendor. Body, tables and stored FAQ answers are checked. This checks evidence coverage, not whether every claim follows from its source; technical review remains necessary.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>technical_claim_scope</code></td><td>Flags unqualified capacity figures, unconditional overwrite claims, universal product recommendations and documentation-homepage citations. State the supported model, mode, resources and licence; describe the actual migration or push options; cite the specific technical page. These are editorial review items.</td><td>Warn only</td></tr>
+                <tr><td><code>product_scope</code></td><td>Flags known management-scope errors: F5 BIG-IQ roles and mandatory Guided Configuration claims, Panorama licensing described as separate management licences for every monitored appliance, and Prisma Access integration without a management-mode qualification. Panorama device entitlements belong to the management instance; Prisma Access can use Panorama with the Cloud Services plugin or Strata Cloud Manager.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>vendor_scope</code></td><td>A single-vendor article does not grow a section about another vendor, or keep recommending one, unless the title or brief commissioned that vendor. Remove the material, or put the other vendor in the brief and rewrite.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>severe_defect_claims</code></td><td>Absolute defect claims &mdash; &ldquo;a critical bug&rdquo;, &ldquo;renders the feature unusable&rdquo;, &ldquo;the API cannot be used&rdquo; &mdash; name the exact version or advisory and cite the subject vendor's own advisory or release note in the same sentence. Runs on vendor articles only.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>link_relevance</code></td><td>Every internal link points at something the article actually discusses. <code>internal_link_targets</code> asks whether a link goes where its anchor says &mdash; correctness. This asks whether the prose earned it: a link whose subject appears nowhere outside the link itself was inserted, not written about, and reads as an advert.</td><td>Warn only</td></tr>
+                <tr><td><code>cross_vendor_links</code></td><td>A single-vendor article cannot insert another vendor's course as a generic recommendation. Cross-vendor links are allowed in a genuine comparison only when that vendor is discussed substantively outside the link anchor.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>unnamed_attribution</code></td><td>No observation is credited to unnamed in-house staff. &ldquo;Red Education instructors regularly see that&hellip;&rdquo; reads as authority while resting on nobody, and is generic enough to sit on any vendor&rsquo;s article unchanged. Keyed on the shape rather than the phrase, because one article carried three instances using three different verbs. Naming a real instructor passes.</td><td>Warn only</td></tr>
+                <tr><td><code>table_substance</code></td><td>A table column headed <b>Logistics</b>, <b>Cost</b>, <b>Duration</b> or similar actually contains a figure. A table renders as reference data &mdash; clean rules, aligned columns, an authoritative look &mdash; whether or not any cell holds a checkable fact. One shipped under &ldquo;Certification and Exam Logistics&rdquo; whose Logistics column read &ldquo;Proctored evaluation&rdquo;: no exam code, no duration, no question count, no fee.</td><td>Warn only</td></tr>
+                <tr><td><code>heading_length</code></td><td>No heading runs past 100 characters. A heading that long means the paragraph after it was written on the same line, and markdown runs a heading to the end of the line &mdash; so the whole paragraph becomes the heading and renders as a wall of capitals. One shipped at QA 97 because <code>structure_length</code> counts H2s, and a 500-character H2 still counts as one. Where the brief's outline names that section, the message quotes it as the replacement.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>vendor_grounding</code></td><td><b>V11.</b> A certification guide cites at least one page from the vendor whose exam it describes. A credential's name, level, exam code and domain weightings are only confirmable against the vendor, so an article that never read one has verified none of them &mdash; and every other check can be satisfied by anybody's prose. The guide that proved it was written from a competitor's comparison page and a NIST PDF, scored 100 on REACS, and invented the credential's name.</td><td><b>Blocks</b></td></tr>
+                <tr><td><code>internal_link_targets</code></td><td>Every internal link points at a real, known page: never the bare site root, never the same URL reused for two different anchors, and never a page that doesn't match the specific course the anchor names.</td><td>Warn only</td></tr>
+                <tr><td><code>internal_link_density</code></td><td>No more than four internal links to rededucation.com. A focused article carries 2&ndash;4 links its prose has earned; past that it reads as a link list. Trim unless the brief genuinely needs more.</td><td>Warn only</td></tr>
+                <tr><td><code>serp_competitiveness</code></td><td>Draft length vs the median of pages actually ranking for the keyword.</td><td>Warn only</td></tr>
+                <tr><td><code>direct_answer</code></td><td>The opening paragraph is a standalone 40&ndash;60-word answer an AI overview could quote.</td><td>Warn only</td></tr>
+                <tr><td><code>entity_coverage</code></td><td>At least 3 of the vendor's real products/certifications/courses are mentioned by name.</td><td>Warn only</td></tr>
+                <tr><td><code>internal_links</code></td><td>Every internal link requested in the brief appears in the body.</td><td>Warn only</td></tr>
+                <tr><td><code>title_subject_coverage</code></td><td>The subject the <i>title</i> promises actually appears in the body. Nothing else catches an article that is well sourced and on-keyword but simply not about the thing it is headlined as.</td><td>Warn only</td></tr>
+                <tr><td><code>meta_description</code></td><td>Meta description length.</td><td>Warn only</td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div></section>
+
+          <section id="reacs" class="card guide-section"><div class="card__body">
+            <div class="section-label">REACS — the AI Content Standard</div>
+            <p>A <b>second, independent gate</b> alongside QA above — same idea (deterministic checks, never scored by the model), different question. QA asks "is this draft internally sound?" (grounded, cited, on-brief). REACS asks "does this meet Red Education's AI-search-visibility content standard?" The two panels can disagree — an article can pass QA cleanly and still fail REACS, or vice versa; publishing needs both. Score = mandatory pillars &times; 60% + advisory pillars &times; 40%, rounded. <b>Any single mandatory failure blocks REACS regardless of score.</b> Pass requires zero mandatory failures <i>and</i> a score of at least <b>90</b>. Six mandatory pillars and six advisory &mdash; the instructor-byline pillar was taken off the gate by decision, so a missing byline no longer blocks a publish.</p>
+            <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th>Pillar</th><th>Tier</th><th>Verifies</th></tr></thead>
+              <tbody>
+                <tr><td><code>single_search_intent</code></td><td>Mandatory</td><td>The target keyword appears verbatim in the article title <b>and</b> the meta title.</td></tr>
+                <tr><td><code>direct_answer_first</code></td><td>Mandatory</td><td>The opening paragraph is &le;70 words, names the keyword, and <b>answers</b> the question — an opening that describes the article ("This guide breaks down&hellip;") fails.</td></tr>
+                <tr><td><code>comparison_table</code></td><td>Mandatory</td><td>At least one markdown table (courses, comparisons, exam domains).</td></tr>
+                <tr><td><code>faq_depth</code></td><td>Mandatory</td><td>At least 8 FAQs <b>with written answers</b> (target 10). Answers are counted, not questions — an empty accordion body does not count.</td></tr>
+                <tr><td><code>internal_linking</code></td><td>Mandatory</td><td>At least 2 links to rededucation.com or a relative path. The site root does not count.</td></tr>
+                <tr><td><code>freshness_stamp</code></td><td>Mandatory</td><td>A visible "Last updated:" line carrying a <b>full date</b> ("19 August 2026"). A month and year alone fails. Every accepted full write, targeted fix, section rewrite or proofreading edit refreshes this line mechanically to the real edit date.</td></tr>
+                <tr><td><code>question_headings</code></td><td>Advisory</td><td>At least 3 question-style H2s ("What is&hellip;?", "How difficult is&hellip;?").</td></tr>
+                <tr><td><code>entity_coverage</code></td><td>Advisory</td><td>At least 4 knowledge-base entities (products/certs) mentioned — REACS's own version of QA's <code>entity_coverage</code>, scored separately.</td></tr>
+                <tr><td><code>voice_consistency</code></td><td>Advisory</td><td>Experience is written in direct <b>third-person</b> editorial prose. First-person or unattributed house claims ("I have observed&hellip;", "we often recommend&hellip;", "our experience&hellip;") fail under a "Technically reviewed by" byline. Never invent a volume of learners taught.</td></tr>
+                <tr><td><code>common_mistakes</code></td><td>Advisory</td><td>A "Common mistakes" (or "pitfalls") section.</td></tr>
+                <tr><td><code>citable_definition</code></td><td>Advisory</td><td>One clean "X is &hellip;" sentence an AI could quote verbatim.</td></tr>
+                <tr><td><code>summary_and_cta</code></td><td>Advisory</td><td>A closing summary H2, and <b>exactly one</b> call to action in the body. Stacked closes fail; so does a CTA that only exists in the separate <code>cta</code> field.</td></tr>
+              </tbody>
+            </table>
+            </div>
+          </div></section>
+
+          <section id="vendors" class="card guide-section"><div class="card__body">
+            <div class="section-label">Manage vendors (Vendor Centre)</div>
+            <ul style="margin-bottom:0">
+              <li><b>Priority</b> (P1&ndash;P5) — the business and partnership lever: gates topic generation, brief creation, article writing and WordPress pushes, and weights topic scoring. Unset = research-only; sources and historical coverage remain, but no new commercial content can move through the pipeline.</li>
+              <li><b>Products</b> — the vendor's product line with lifecycle status; context for the writer.</li>
+              <li><b>Certifications</b> — current or retired. <b>Marking a cert retired matters</b>: it becomes a QA tripwire, warning any article that treats it as current. Retirement year, replacement cert, and custom warning notes are all used. A row that is really a training course (its only course has the same name and no exam version is recorded) is badged <b>course, not a credential</b>: it isn't counted as a certification on the vendor card, isn't given to the writer as a credential, and the Topic Engine won't propose certification guides about it. Give it a real credential name and exam version to change that.</li>
+              <li><b>Courses</b> — must belong to a certification and have a URL. Fed to the writer as context, entity-coverage targets, and real internal-link candidates.</li>
+            </ul>
+          </div></section>
+
+          <section id="allowlist-gaps" class="card guide-section"><div class="card__body">
+            <div class="section-label">Allowlist gaps</div>
+            <p>This is the human review queue for domains that rank for our live research
+              queries but are not yet trusted sources. Retrieval runs an open-web comparison
+              search alongside its normal scoped search, then applies the same allowlist to
+              both. A domain shown here was <b>discarded before its page was fetched</b> and has
+              not supplied facts, citations, or text to an article.</p>
+
+            <h3>Reading the queue</h3>
+            <ul>
+              <li><b>Awaiting a decision</b> contains new or repeatedly seen domains, ordered by the number of sightings and then recency.</li>
+              <li><b>Seen</b> is how many search results have used that domain. Treat frequency as a reason to inspect it, <b>not</b> as a trust or quality score.</li>
+              <li><b>Latest result</b> links to the most recently seen page, and <b>Found for</b> shows the query that produced it. Review both the page and the wider domain before approving: a relevant title can still come from an exam-dump farm, a competitor, or a different subject sharing the same acronym.</li>
+            </ul>
+
+            <h3>Classifying a source</h3>
+            <ul>
+              <li><b>Vendor</b> — an official vendor-owned domain. Attach it to the matching vendor so vendor-scoped research and the vendor-grounding check can recognise it. Only this category accepts a vendor assignment.</li>
+              <li><b>Authority</b> — a government, regulator, standards body, or similarly authoritative independent source.</li>
+              <li><b>Press</b> — established editorial, trade-publication, or news coverage.</li>
+              <li><b>Data</b> — a credible research or statistics source that does not belong in the jobs-only bucket.</li>
+              <li><b>Jobs</b> — salary and vacancy aggregators. These are included only when the topic has salary, career, hiring, or related intent because broad job sites can produce misleading acronym matches.</li>
+              <li><b>Tier 1</b> is for authoritative first-party or primary sources; <b>Tier 2</b> is for established secondary sources. A high Seen count is never a reason to promote a source to Tier 1.</li>
+            </ul>
+
+            <h3>Making a decision</h3>
+            <ul style="margin-bottom:0">
+              <li><b>Approve</b> adds the domain to the trusted source allowlist with the selected category, tier, and vendor assignment. The queue entry is removed, and future research can retrieve and cite pages from that domain. Existing briefs and articles are unchanged; rerun Brief or Write when you need fresh research.</li>
+              <li><b>Ignore</b> keeps the domain blocked and moves it out of the active queue. It does not add the domain to research and does not delete its sighting history.</li>
+              <li><b>Ignored domains</b> is the reversible holding list. <b>Restore</b> returns a domain to Awaiting a decision; it still remains blocked until separately approved.</li>
+              <li>Approval trusts the <b>domain</b>, not just the one result shown. Approve only when pages across that domain are suitable for a published reference list.</li>
+            </ul>
+          </div></section>
+
+          <section id="data-freshness" class="card guide-section"><div class="card__body">
+            <div class="section-label">Where the numbers come from</div>
+            <p>Two figures on the Vendor step are read from outside this tool, so
+              it is worth knowing how current they are.</p>
+            <ul>
+              <li><b>&ldquo;live on rededucation.com&rdquo;</b> — the big number on each
+                vendor card. It comes from a scrape of the site's own sitemap, not
+                from a live query, so it is only as fresh as the last run. The line
+                under the heading says when that was (&ldquo;Site coverage last
+                checked 2 days ago&rdquo;). It refreshes automatically overnight; if
+                you have just published something and want the count now, ask IT to
+                run <code>scrape_published_posts.py</code>.</li>
+              <li><b>&ldquo;live&rdquo; vs &ldquo;awaiting publish&rdquo;</b> — once an
+                article is pushed, this tool only ever creates a <b>draft</b>. It
+                then checks back with WordPress during the working day and marks the
+                article <b>live</b> when someone has actually published it. Until
+                then it reads <b>awaiting publish</b>, which is your reminder that a
+                draft is sitting in WordPress waiting for a human.</li>
+            </ul>
+            <p style="margin-bottom:0">Both checks are read-only: nothing here
+              publishes a post, changes one, or edits the live site.</p>
+          </div></section>
+
+          <section id="usage-costs" class="card guide-section"><div class="card__body">
+            <div class="section-label">Usage &amp; costs</div>
+            <ul style="margin-bottom:0">
+              <li>The <b>Usage</b> chip (every header, top right) shows Serper credits left and Gemini calls today against the 500/day free cap. Click it for 7-day totals and a per-feature spend split.</li>
+              <li><b>Serper credits left is an estimate.</b> Serper has no balance API, so the tool counts what this server spends. Searches made anywhere else &mdash; a script on a laptop, the Serper playground &mdash; are invisible to it. After a top-up, a new key or any outside searching, paste the real number from <a href="https://serper.dev" target="_blank" rel="noopener">serper.dev</a> into <b>Reconcile</b> in that window; everything spent afterwards counts down from it.</li>
+              <li><b>Repeat searches are free for 6 hours.</b> The same query within that window reuses the earlier result and spends nothing; a failed search is retried after 10 minutes. The cache lives in memory, so a restart or deploy clears it.</li>
+              <li>Rough costs: topic batch &asymp; 1 Serper credit per new keyword + 1 AI call &middot; create brief &asymp; 4&ndash;6 credits (1 per 8 trusted domains searched, plus 1 open-web comparison search) + 1 AI call &middot; write or rewrite whole article &asymp; the same research again, 1 credit for the keyword's live Google results, and 1&ndash;3 AI calls &middot; Fix selected &asymp; 1&ndash;3 AI calls &middot; Rewrite one section or Proofread &asymp; 1 AI call. Fixes and section rewrites also read the keyword's live results, which is free if they were fetched in the last 6 hours. Re-score, applying proofread suggestions, Preview and the PDF cost nothing.</li>
+              <li>Balances on <a href="https://serper.dev" target="_blank" rel="noopener">serper.dev</a> and <a href="https://aistudio.google.com" target="_blank" rel="noopener">AI Studio</a> are ground truth; the in-app meter attributes spend per feature.</li>
+            </ul>
+          </div></section>
+
+          <section id="tips" class="card guide-section"><div class="card__body">
+            <div class="section-label">Tips</div>
+            <ul style="margin-bottom:0">
+              <li>A <b>blocked</b> article isn't wasted — read the failed check's detail; it names the exact problem (the copied phrase, the missing keyword, the unsourced figure). Try <b>Fix selected</b> on just that check before reaching for a full rewrite.</li>
+              <li>Genuinely niche topics can stay blocked on length/grounding after 3 attempts — that's the system refusing to pad or invent. Pick a topic with more source coverage, or accept and edit manually.</li>
+              <li>REACS failing on <code>direct_answer_first</code> or <code>single_search_intent</code> almost always means the opening paragraph, the title or the SEO title doesn't literally contain the keyword. A section rewrite won't fix this (it only touches one H2). <b>Fix selected</b> can edit the opening paragraph and the SEO title; if the article title itself lacks the keyword, correct it in the <b>Title</b> field on the Brief step, then <b>Re-score</b>.</li>
+              <li>A finding that quotes a sentence no longer in the article means the report predates an edit &mdash; press <b>Re-score</b> before acting on it.</li>
+              <li>When a check is labelled <b>did not clear last time</b>, stop paying for another attempt at it: open <b>Edit the article yourself</b> and correct the sentence directly. A wrong figure or a clumsy line is usually faster to fix than to describe to a model.</li>
+              <li>Use the <b>&#9681;</b> button (any header) to switch light/dark theme.</li>
+              <li>Keywords beat titles for research: the brief's keyword is the search query, so keep it the canonical vendor-named phrase.</li>
+            </ul>
+          </div></section>
+
+        </div>
+      </div>
+    </div>
+  </main>
+  {% include "_usage_modal.html" %}
+  <script>
+    (function () {
+      var links = Array.prototype.slice.call(document.querySelectorAll(".guide-toc__link"));
+      var sections = Array.prototype.slice.call(document.querySelectorAll(".guide-section"));
+      if (!links.length || !sections.length) return;
+      var byId = {};
+      links.forEach(function (a) { byId[a.getAttribute("href").slice(1)] = a; });
+      var lastId = sections[sections.length - 1].id;
+
+      var current = null;
+      function setActive(id) {
+        if (id === current) return;
+        current = id;
+        links.forEach(function (a) { a.classList.remove("is-active"); });
+        if (byId[id]) byId[id].classList.add("is-active");
+      }
+
+      // Plain scroll-position measurement, computed synchronously on demand —
+      // no IntersectionObserver. That looked like the natural tool for a
+      // scrollspy, but it only reports a section's state relative to a fixed
+      // viewport BAND (rootMargin), so a short trailing section (Tips) that
+      // sits fully on screen without ever crossing into that band — you run
+      // out of page to scroll before it gets there — could never activate at
+      // all. Its callback is also async and not guaranteed to have fired yet
+      // on first paint, which briefly left EVERY link unhighlighted on load.
+      // getBoundingClientRect() has neither problem: it's exact and available
+      // synchronously the instant this runs.
+      var REF_Y = 96;   // px below the sticky header a section must cross to "count"
+
+      function atBottom() {
+        var doc = document.documentElement;
+        return window.innerHeight + window.scrollY >= doc.scrollHeight - 4;
+      }
+
+      function update() {
+        if (atBottom()) { setActive(lastId); return; }
+        var activeId = sections[0].id;
+        for (var i = 0; i < sections.length; i++) {
+          if (sections[i].getBoundingClientRect().top <= REF_Y) activeId = sections[i].id;
+        }
+        setActive(activeId);
+      }
+
+      // Called directly, not rAF-throttled: update() is a handful of
+      // getBoundingClientRect() reads over 8 sections, cheap enough to run on
+      // every native scroll tick outright. An rAF wrapper was tried first and
+      // dropped — gating the ONLY call to update() behind a callback whose
+      // firing isn't guaranteed everywhere traded a real correctness risk for
+      // a micro-optimisation this page doesn't need.
+      window.addEventListener("scroll", update, { passive: true });
+      window.addEventListener("resize", update);
+
+      update();
+    })();
+  </script>
+</body>
+</html>

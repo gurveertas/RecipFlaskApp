@@ -1,0 +1,47 @@
+{
+  "topic": "Palo Alto Networks NGFW Engineer certification salary and outlook",
+  "region": "Australia",
+  "as_of": "2026-07-06",
+  "sources": [
+    {
+      "url": "https://www.darkreading.com/careers/ngfw-engineer-salary-2026",
+      "domain": "www.darkreading.com",
+      "title": "NGFW Engineer Certification Reshapes Network Security Salaries in 2026",
+      "published": "2026-05-10",
+      "tier": 2,
+      "is_vendor": false,
+      "vendor": null,
+      "text": "The Palo Alto Networks NGFW Engineer certification has quickly become a hiring benchmark for enterprise security teams. According to recruitment analysis, NGFW Engineer certification raises salaries by 20-40% for certified Palo Alto Networks professionals compared with uncertified peers. Demand is strongest in financial services and government, where firewall expertise is tied to compliance obligations. Employers increasingly list the credential explicitly in job descriptions as the older certification is phased out."
+    },
+    {
+      "url": "https://www.isc2.org/research/ngfw-workforce-2026",
+      "domain": "www.isc2.org",
+      "title": "Workforce Study: Certified Firewall Engineers Command a Clear Premium",
+      "published": "2026-04-22",
+      "tier": 2,
+      "is_vendor": false,
+      "vendor": null,
+      "text": "Workforce data shows that Palo Alto Networks NGFW Engineer certified professionals earn 20-40% more than uncertified peers in equivalent network security roles. The study attributes the gap to a widening talent shortage across the Asia-Pacific region. Certified engineers in enterprise environments are frequently promoted into senior roles within two years of certification."
+    },
+    {
+      "url": "https://www.securityweek.com/palo-alto-cert-changes-2026",
+      "domain": "www.securityweek.com",
+      "title": "Palo Alto Salary Outlook: The Complete 2023 Guide",
+      "published": "2026-03-01",
+      "tier": 2,
+      "is_vendor": false,
+      "vendor": null,
+      "text": "IT security specialists working with Palo Alto firewalls report an average salary of $121,963 per year in the United States. This new role-based framework replaces the PCNSE certification, which Palo Alto Networks retired in 2025. Engineers whose PCNSE has expired must sit the NGFW Engineer exam as new candidates, since there is no bridge exam."
+    },
+    {
+      "url": "https://unit42.paloaltonetworks.com/example-firewall-advisory-2026",
+      "domain": "unit42.paloaltonetworks.com",
+      "title": "Unit 42 Advisory: Exploitation Activity Targeting Firewall Appliances",
+      "published": "2026-06-01",
+      "tier": 1,
+      "is_vendor": true,
+      "vendor": "Palo Alto Networks",
+      "text": "Our researchers observed that the vulnerability CVE-2026-01234 was exploited in the wild against unpatched firewall appliances within 48 hours of disclosure. Customers running affected PAN-OS versions should upgrade immediately. The NGFW Engineer certification curriculum now covers rapid patch-response workflows for exactly this class of threat."
+    }
+  ]
+}

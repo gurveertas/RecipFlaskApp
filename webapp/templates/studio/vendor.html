@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Article Studio</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  {% from "studio/_stepper.html" import stepper %}
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">Article Studio</div>
+        <div class="app-header__subtitle">Vendor &rarr; Topic &rarr; Brief &rarr; Article &rarr; Publish</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {{ stepper('vendor') }}
+
+      {% include "_flashes.html" %}
+
+      <details class="help">
+        <summary>How this step works — choosing a vendor</summary>
+        <div class="help__body">
+          <p>Every Studio article belongs to a vendor. Pick one to see and generate topics for it.</p>
+          <dl>
+            <dt>P1&ndash;P5 badge</dt><dd>Commercial priority, set in Manage vendors. P1 is highest. A vendor <b>needs a priority before topics can be generated</b>, and higher priority raises topic scores.</dd>
+            <dt>certifications / courses</dt><dd>What the Vendor Knowledge Base holds for this vendor — the writer uses these as real facts and CTA targets, so richer data means better articles.</dd>
+            <dt>live on site</dt><dd>Published pages on rededucation.com about this vendor, from the site scrape &mdash; the best read on where coverage already exists and where it doesn't. A comparison post covering two vendors counts for both.</dd>
+            <dt>in this tool</dt><dd>Work started here, split into <b>mutually exclusive</b> stages that add up to the total — each article appears once: <b>in brief</b> (never written), <b>needs fixes</b> (written but QA or REACS is holding it), <b>ready</b> (both gates passed, not sent yet), <b>pushed</b> (a draft now exists in WordPress).</dd>
+          </dl>
+          <p style="margin-top:var(--space-3)">Full walkthrough: <a href="{{ url_for('guide') }}">Guide</a>.</p>
+        </div>
+      </details>
+
+      <div class="section-label">Which vendor is this for?</div>
+      <p class="text-muted" style="margin-top:calc(var(--space-2) * -1);margin-bottom:var(--space-2)">
+        Sorted by priority first. The big number is how many posts are already
+        <b>live on rededucation.com</b> for that vendor — a low number is a gap
+        worth filling. Below it: what the knowledge base holds, and any work
+        already started here.
+        {# Counts come from the site scrape, not from live queries, so they are
+           only as current as the last run. Stated rather than assumed. #}
+        <span class="coverage-freshness">Site coverage last checked
+          {{ coverage_scraped_at | ago }}.</span></p>
+
+      <div class="vendor-grid">
+        {% for v in vendors %}
+        {% set st = stats[v.id] %}
+        <a class="vendor-pick{{ '' if v.priority else ' vendor-pick--dim' }}"
+           href="{{ url_for('studio.topics_for_vendor', vendor_id=v.id) }}">
+          <div class="vendor-pick__top">
+            <span class="vendor-pick__name">{{ v.name }}</span>
+            {% if v.priority %}
+              <span class="badge badge--info">P{{ v.priority }}</span>
+            {% else %}
+              <span class="badge" style="background:var(--surface-3);color:var(--text-subtle)">Research only</span>
+            {% endif %}
+          </div>
+          {# Coverage leads the card, because "how much is already written
+             about this vendor" is the question this screen exists to answer.
+             As four equal lines of text, 43 and 0 looked identical and the
+             grid could not be scanned. Size and weight carry that on their
+             own — a comparison bar was tried here and cut. #}
+          <div class="coverage{{ ' coverage--none' if not st.published }}">
+            <b class="coverage__count">{{ st.published }}</b>
+            <span class="coverage__label">live on rededucation.com</span>
+          </div>
+
+          <div class="vendor-pick__stats">
+            <span class="vendor-pick__kb">
+              <b>{{ st.certifications }}</b> certifications &middot;
+              <b>{{ st.courses }}</b> courses
+            </span>
+            {# Only shown when there IS work. "0 started in this tool" was on
+               almost every card and reported an absence. #}
+            {% if st.articles %}
+              <span class="is-articles has-work">
+                <b>{{ st.articles }}</b> in this tool
+                {%- if st.live %} &middot; <span style="color:var(--ok)">{{ st.live }} live</span>{% endif %}
+                {%- if st.pushed %} &middot; <span style="color:var(--text-muted)">{{ st.pushed }} awaiting publish</span>{% endif %}
+                {%- if st.ready %} &middot; <span style="color:var(--ok)">{{ st.ready }} ready</span>{% endif %}
+                {%- if st.blocked %} &middot; <span style="color:var(--warn)">{{ st.blocked }} needs fixes</span>{% endif %}
+                {%- if st.brief %} &middot; <span style="color:var(--text-subtle)">{{ st.brief }} in brief</span>{% endif %}
+              </span>
+            {% endif %}
+          </div>
+          {# A status line only when it changes what you would do. The old
+             fallback said "Ready — full brief quality" on every healthy
+             vendor — 14 cards reporting the absence of a problem. #}
+          {% if not v.priority %}
+            <span class="vendor-pick__cta">Commercial generation disabled</span>
+          {% elif st.certifications == 0 %}
+            <span class="vendor-pick__cta" style="color:var(--warn-text)">No certifications in the KB &mdash; briefs will be thin</span>
+          {% elif not st.published %}
+            <span class="vendor-pick__cta" style="color:var(--brand)">Open opportunity &mdash; no coverage yet</span>
+          {% endif %}
+        </a>
+        {% endfor %}
+      </div>
+
+      <section class="card" style="border-color:var(--danger)">
+        <div class="card__body">
+          <div class="section-label" style="color:var(--danger-text)">Danger zone</div>
+          <p class="text-muted" style="margin-top:var(--space-2);margin-bottom:var(--space-3)">
+            Deletes every generated topic idea and every article, across all
+            vendors — currently <b>{{ topics_total }}</b> topic(s) and
+            <b>{{ articles_total }}</b> article(s). Vendors, certifications,
+            and courses (the Knowledge Base) are untouched — only generated
+            content is cleared, so you can start the pipeline fresh.
+            This cannot be undone.
+          </p>
+          <form method="post" action="{{ url_for('studio.purge') }}" id="purgeForm">
+            <button type="submit" class="btn btn--danger" id="purgeBtn">Purge all topics &amp; articles</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    document.getElementById('purgeForm').addEventListener('submit', function (e) {
+      var topics = {{ topics_total }};
+      var articles = {{ articles_total }};
+      var msg = 'Delete ' + topics + ' topic idea(s) and ' + articles +
+        ' article(s) across every vendor? This cannot be undone.';
+      if (!window.confirm(msg)) {
+        e.preventDefault();
+      }
+    });
+  </script>
+  {% include "_usage_modal.html" %}
+</body>
+</html>

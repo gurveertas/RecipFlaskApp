@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Allowlist gaps &mdash; Blog Generator</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">Allowlist gaps</div>
+        <div class="app-header__subtitle">Review uncited domains found during live research</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {% include "_flashes.html" %}
+
+      <details class="help">
+        <summary>How allowlist review works</summary>
+        <div class="help__body">
+          <p>Open-web retrieval records domains that appeared for a topic but
+          were excluded by the source allowlist. Nothing listed here has been
+          used in an article.</p>
+          <dl>
+            <dt>Seen</dt><dd>How often the domain appeared. Frequency is evidence to review, not a quality score.</dd>
+            <dt>Category</dt><dd>How retrieval should treat the source. Vendor sources can be attached to one vendor.</dd>
+            <dt>Tier</dt><dd>Tier 1 is authoritative; tier 2 is an established secondary source.</dd>
+            <dt>Approve</dt><dd>Adds the domain to the source allowlist for future research.</dd>
+            <dt>Ignore</dt><dd>Keeps the domain blocked and moves it out of the active queue.</dd>
+          </dl>
+        </div>
+      </details>
+
+      <section class="card">
+        <div class="card__body allowlist-section">
+          <div class="allowlist-section__head">
+            <div>
+              <div class="section-label">Awaiting a decision</div>
+              <p class="text-muted">Review the latest result before allowing a domain into future article research.</p>
+            </div>
+            <span class="badge badge--warn">{{ pending|length }} pending</span>
+          </div>
+
+          {% if not pending %}
+            <div class="placeholder">
+              {% include '_empty_icon.html' %}
+              <div class="placeholder__title">No domains awaiting review</div>
+              <p>New gaps appear here after live research runs.</p>
+            </div>
+          {% else %}
+            <div class="allowlist-list">
+            {% for d in pending %}
+              <article class="allowlist-row">
+                <div class="allowlist-row__summary">
+                  <div class="allowlist-row__domain">
+                    <strong>{{ d.domain }}</strong>
+                    <span class="badge">Seen {{ d.hits }}&times;</span>
+                  </div>
+                  {% if d.last_url %}
+                    <a class="allowlist-row__result" href="{{ d.last_url }}"
+                       target="_blank" rel="noopener">{{ d.last_title or d.last_url }}</a>
+                  {% elif d.last_title %}
+                    <div class="allowlist-row__result">{{ d.last_title }}</div>
+                  {% endif %}
+                  {% if d.last_query %}
+                    <div class="allowlist-row__query">Found for &ldquo;{{ d.last_query }}&rdquo;</div>
+                  {% endif %}
+                </div>
+
+                <form id="approve-{{ d.id }}" method="post" class="allowlist-decision"
+                      action="{{ url_for('admin.domain_approve', sighting_id=d.id) }}">
+                  <label class="allowlist-field">
+                    <span>Category</span>
+                    <select class="input" name="category" data-domain-category>
+                      {% for c in categories %}
+                      <option value="{{ c.value }}">{{ c.value }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                  <label class="allowlist-field">
+                    <span>Source tier</span>
+                    <select class="input" name="tier">
+                      <option value="1">Tier 1 &mdash; authoritative</option>
+                      <option value="2" selected>Tier 2 &mdash; established</option>
+                    </select>
+                  </label>
+                  <label class="allowlist-field">
+                    <span>Vendor</span>
+                    <select class="input" name="vendor_id" data-domain-vendor>
+                      <option value="">No vendor</option>
+                      {% for v in vendors %}
+                      <option value="{{ v.id }}">{{ v.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                </form>
+
+                <form id="ignore-{{ d.id }}" method="post" hidden
+                      action="{{ url_for('admin.domain_ignore', sighting_id=d.id) }}"></form>
+                <div class="allowlist-row__actions">
+                  <button type="submit" form="approve-{{ d.id }}"
+                          class="btn btn--sm btn--primary">Approve</button>
+                  <button type="submit" form="ignore-{{ d.id }}"
+                          class="btn btn--sm btn--ghost">Ignore</button>
+                </div>
+              </article>
+            {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      {% if ignored %}
+      <section class="card">
+        <div class="card__body allowlist-section">
+          <div class="allowlist-section__head">
+            <div class="section-label">Ignored domains</div>
+            <span class="badge">{{ ignored|length }} ignored</span>
+          </div>
+          <div class="allowlist-ignored">
+            {% for d in ignored %}
+            <div class="allowlist-ignored__row">
+              <div>
+                <strong>{{ d.domain }}</strong>
+                <span class="text-muted">Seen {{ d.hits }}&times;</span>
+              </div>
+              <form method="post"
+                    action="{{ url_for('admin.domain_restore', sighting_id=d.id) }}">
+                <button type="submit" class="btn btn--sm btn--ghost">Restore</button>
+              </form>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+    </div>
+  </main>
+
+  <script>
+    document.querySelectorAll('.allowlist-decision').forEach(function (form) {
+      var category = form.querySelector('[data-domain-category]');
+      var vendor = form.querySelector('[data-domain-vendor]');
+
+      function syncVendor() {
+        var enabled = category.value === 'vendor';
+        vendor.disabled = !enabled;
+        if (!enabled) vendor.value = '';
+      }
+
+      category.addEventListener('change', syncVendor);
+      syncVendor();
+    });
+  </script>
+  {% include "_usage_modal.html" %}
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Publish &mdash; Article Studio</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  {% from "studio/_stepper.html" import stepper %}
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">{{ article.title }}</div>
+        <div class="app-header__subtitle">Article Studio &middot; Publish</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {% include "_flashes.html" %}
+      {{ stepper('publish', vendor_id=article.vendor_id, article_id=article.id) }}
+
+      {# Every other step carries this panel; Publish had none, so its caveats
+         had nowhere to live and ended up as a wall of grey text under the
+         table. Collapsed by default — it is reference, not instruction. #}
+      <details class="help">
+        <summary>How this step works &mdash; what publishing does and doesn't do</summary>
+        <div class="help__body">
+          <p><b>Only ever creates a draft.</b> Nothing this tool sends can go
+            live; publishing stays a human action inside WordPress.</p>
+          <dl>
+            <dt>Author</dt>
+            <dd>WordPress requires an author on every post &mdash; there is no
+              &ldquo;none&rdquo; option &mdash; and the theme prints that
+              user's public display name on the article. The named expert
+              still appears in the body as &ldquo;Technically reviewed
+              by&nbsp;&hellip;&rdquo;, which we render and which is
+              independent of who owns the post.</dd>
+            <dt>Permissions</dt>
+            <dd>Publishing as another user needs the
+              <code>edit_others_posts</code> capability (Editor or
+              Administrator). An Author-role token doesn't error &mdash; it
+              silently reassigns the post to itself.</dd>
+            <dt>By hand</dt>
+            <dd>The featured image is attached by an editor in WordPress.
+              Tags aren't sent at all: the site's tag vocabulary is legacy
+              news terms, none of which fit these articles.</dd>
+            <dt>Pushing twice</dt>
+            <dd>Blocked while the draft still exists &mdash; a second push
+              would create a duplicate rather than update it. If the draft is
+              deleted in WordPress, the article becomes pushable again.</dd>
+          </dl>
+        </div>
+      </details>
+
+      <section class="card">
+        <div class="card__body">
+          <div class="section-label">
+            {{ 'What was sent to WordPress' if article.wp_post_id
+               else 'What will be sent to WordPress' }}</div>
+          <table class="data-table">
+            <thead><tr><th>Field</th><th>Value</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><b>Title</b></td><td>{{ article.title }}</td>
+                  <td><span class="badge badge--pass">ready</span></td></tr>
+              <tr><td><b>Slug</b></td><td>{{ article.slug }}</td>
+                  <td><span class="badge badge--pass">ready</span></td></tr>
+              <tr><td><b>Body</b></td><td>{{ article.word_count }} words</td>
+                  <td><span class="badge badge--pass">ready</span></td></tr>
+              <tr><td><b>Excerpt</b></td><td>{{ article.excerpt|truncate(70) }}</td>
+                  <td><span class="badge badge--pass">ready</span></td></tr>
+              <tr><td><b>SEO title / description</b></td>
+                  <td>{{ article.meta_title }}</td>
+                  <td><span class="badge badge--pass">ready</span></td></tr>
+              <tr><td><b>Author</b></td>
+                  <td>{% if wp_author.source == 'instructor' %}
+                        {{ wp_author.name }} (WP user {{ wp_author.wp_user_id }})
+                      {% elif wp_author.source == 'shared account' %}
+                        WP user {{ wp_author.wp_user_id }}{% if wp_author.name %}
+                          &mdash; publishes as &ldquo;{{ wp_author.name }}&rdquo;{% endif %}
+                      {% else %}<span class="data-table__muted">API credential's own account</span>{% endif %}</td>
+                  <td>{% if wp_author.ready %}
+                        <span class="badge badge--pass">ready</span>
+                      {% else %}<span class="badge badge--warn">unset</span>{% endif %}</td></tr>
+              <tr><td><b>Category</b></td>
+                  <td>{% if wp_category.ready %}
+                        {{ wp_category.name }} (WP category {{ wp_category.wp_category_id }})
+                      {% else %}<span class="data-table__muted">{{ wp_category.reason }}</span>{% endif %}</td>
+                  <td>{% if wp_category.ready %}
+                        <span class="badge badge--pass">ready</span>
+                      {% else %}<span class="badge badge--warn">no category</span>{% endif %}</td></tr>
+              <tr><td><b>Featured image</b></td>
+                  <td class="data-table__muted">attached by an editor in WordPress
+                    &mdash; the brief's image description is not used</td>
+                  <td><span class="badge">by hand</span></td></tr>
+              <tr><td><b>Tags</b></td>
+                  <td class="data-table__muted">not sent &mdash; the site's tag
+                    vocabulary is legacy news terms, none fitting these articles</td>
+                  <td><span class="badge">none</span></td></tr>
+            </tbody>
+          </table>
+          {% if not wp_author.ready or not wp_category.ready %}
+            <p class="usage-table-note">
+              {%- if not wp_author.ready %}{{ wp_author.reason }} {% endif %}
+              {%- if not wp_category.ready %}{{ wp_category.reason }}{% endif %}</p>
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__body">
+          {# Heading follows state: once the draft exists this card is no
+             longer an action to take, it is a receipt. #}
+          <div class="section-label">
+            {{ 'WordPress draft' if article.wp_post_id else 'Push to WordPress' }}</div>
+          {% if article.wp_post_id %}
+            {# One primary action, as a button. "Open it" used to be a small
+               text link buried mid-sentence in the banner — the single thing
+               you most likely want next, styled as the least clickable thing
+               on the card. #}
+            <div class="push-receipt">
+              <div class="push-receipt__state">
+                <span class="verdict__icon" aria-hidden="true">&#10003;</span>
+                <div>
+                  <div class="push-receipt__headline">Draft created</div>
+                  <div class="push-receipt__meta">
+                    post {{ article.wp_post_id }} &middot;
+                    {{ article.pushed_at.strftime('%d %b %Y, %H:%M') if article.pushed_at }} UTC
+                    &middot; not live &mdash; drafts have no public URL
+                  </div>
+                </div>
+              </div>
+              {# The EDIT screen, not article.wp_link — a draft's public
+                 permalink 404s for anyone not logged in. #}
+              {% if wp_edit_url %}
+                <a class="btn btn--primary" href="{{ wp_edit_url }}"
+                   target="_blank" rel="noopener">Edit in WordPress</a>
+              {% endif %}
+            </div>
+            <p class="push-next">
+              <b>Next:</b> attach a featured image in WordPress, then publish
+              it there &mdash; this tool never takes a post live.
+            </p>
+          {% else %}
+            {# Mirrors the pushed receipt above: state on the left, the one
+               action on the right. Previously a lone sentence and a floating
+               button in an otherwise empty card. #}
+            {% set blocked = not commercially_active or not wp_ready or not publish_ready %}
+            <div class="push-receipt{{ ' push-receipt--blocked' if blocked else ' push-receipt--pending' }}">
+              <div class="push-receipt__state">
+                <span class="verdict__icon" aria-hidden="true">
+                  {{ '!' if blocked else '&uarr;'|safe }}</span>
+                <div>
+                  <div class="push-receipt__headline">
+                    {%- if not commercially_active %}Vendor is research-only
+                    {%- elif not wp_ready %}WordPress isn't configured
+                    {%- elif not publish_ready %}Not a publish candidate yet
+                    {%- else %}Ready to push{% endif %}</div>
+                  <div class="push-receipt__meta">
+                    {%- if not commercially_active %}
+                      Commercial publishing is disabled in the Vendor Centre
+                    {%- elif not wp_ready %}
+                      Set <code>WORDPRESS_URL</code>, <code>WORDPRESS_USERNAME</code>
+                      and <code>WORDPRESS_APP_PASSWORD</code> in <code>.env</code>
+                      (an Application Password, not a login password), then restart
+                    {%- elif not publish_ready %}
+                      QA and REACS must both pass first &mdash; fix the flagged
+                      checks on the Article step
+                    {%- else %}
+                      Creates a draft in WordPress. Never publishes live
+                    {%- endif %}</div>
+                </div>
+              </div>
+              <form method="post"
+                    action="{{ url_for('studio.push_step', article_id=article.id) }}"
+                    data-busy="Creating the WordPress draft">
+                <button class="btn btn--primary" type="submit"
+                  {%- if blocked %} disabled{% endif %}>Create WordPress draft</button>
+              </form>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <details class="help">
+        <summary>{{ 'Exact payload that was sent' if article.wp_post_id
+                              else 'Exact payload that will be sent (dry run)' }}</summary>
+        <div class="help__body">
+          <p>Built without contacting WordPress. This is the complete request
+            body, including the JSON-LD schema and the inline table styling
+            that makes generated tables match hand-written posts.</p>
+          <pre class="pre-scroll"><code>{{ payload_json }}</code></pre>
+        </div>
+      </details>
+    </div>
+  </main>
+  {% include "_usage_modal.html" %}
+</body>
+</html>

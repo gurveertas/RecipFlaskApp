@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Topic Engine — Blog Generator</title>
+  <link rel="icon" type="image/webp" href="{{ url_for('static', filename='img/red-education-icon.webp') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+  <script>
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t) document.documentElement.setAttribute("data-theme", t);
+    })();
+  </script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="app-header__mark" role="img" aria-label="Red Education"></div>
+      <div class="app-header__titles">
+        <div class="app-header__title">Topic Engine</div>
+        <div class="app-header__subtitle">AI-proposed ideas, scored by Red Education's weighting formula</div>
+      </div>
+    </div>
+    <div class="app-header__spacer"></div>
+    {% include "_nav.html" %}
+    {% include "_usage.html" %}
+    {% include "_theme.html" %}
+  </header>
+
+  <main class="app-main">
+    <div class="stack">
+      {% include "_flashes.html" %}
+
+      <details class="help">
+        <summary>How this page works</summary>
+        <div class="help__body">
+          <p>The classic Topic Engine board (Article Studio's Topic step is the guided version of this). The AI proposes ideas; the fixed scoring formula decides create / parked / rejected; you can override any verdict with the priority dropdown. Difficulty comes from a live SERP measurement, not a model guess.</p>
+        </div>
+      </details>
+
+      <!-- ---- generate form ---- -->
+      <form class="card" method="post" action="{{ url_for('topics.generate') }}"
+            data-busy="Generating topic ideas — AI proposal, then live SERP difficulty scoring"
+            data-busy-hint="Usually 15–40 seconds">
+        <div class="card__body">
+          <div class="section-label">Generate topic ideas</div>
+          <p class="field__hint" style="margin-top:0;margin-bottom:var(--space-3)">
+            The model proposes and estimates; Red Education's weighting formula scores and decides.
+            Duplicates of existing keywords are rejected automatically.
+          </p>
+          {% if not vendors %}
+            <div class="banner banner--info">
+              No vendors have a priority set yet — assign at least one P1–P5 priority in the
+              <a href="{{ url_for('admin.vendor_list') }}">Vendor Centre</a> first.
+            </div>
+          {% else %}
+          <div class="searchbar__inner">
+            <div class="searchbar__field searchbar__field--compact">
+              <select class="input" name="vendor_id" required>
+                <option value="" disabled selected>Vendor…</option>
+                {% for v in vendors %}
+                  <option value="{{ v.id }}">P{{ v.priority }} · {{ v.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="searchbar__field searchbar__field--compact">
+              <select class="input" name="count">
+                <option value="1">1 idea</option>
+                <option value="5">5 ideas</option>
+                <option value="10" selected>10 ideas</option>
+                <option value="15">15 ideas</option>
+                <option value="25">25 ideas</option>
+              </select>
+            </div>
+            <div class="searchbar__field searchbar__field--grow">
+              <input class="input" type="text" name="theme" placeholder="Optional theme, e.g. zero trust">
+            </div>
+            <button type="submit" class="btn btn--primary">Generate ideas</button>
+          </div>
+          {% endif %}
+        </div>
+      </form>
+
+      <!-- ---- filter tabs ---- -->
+      <div class="filter-tabs">
+        <a class="filter-tab {{ 'filter-tab--active' if active_filter == 'all' else '' }}"
+           href="{{ url_for('topics.topic_board') }}">All ({{ total }})</a>
+        <a class="filter-tab {{ 'filter-tab--active' if active_filter == 'create' else '' }}"
+           href="{{ url_for('topics.topic_board', filter='create') }}">Create ({{ counts.create }})</a>
+        <a class="filter-tab {{ 'filter-tab--active' if active_filter == 'parked' else '' }}"
+           href="{{ url_for('topics.topic_board', filter='parked') }}">Parked ({{ counts.parked }})</a>
+        <a class="filter-tab {{ 'filter-tab--active' if active_filter == 'retire' else '' }}"
+           href="{{ url_for('topics.topic_board', filter='retire') }}">Rejected ({{ counts.retire }})</a>
+      </div>
+
+      <!-- ---- topic list ---- -->
+      {% if not topics %}
+        <div class="card"><div class="card__body">
+          <div class="placeholder">
+            {% include '_empty_icon.html' %}
+            <div class="placeholder__title">No topics{{ ' match this filter' if active_filter != 'all' else ' yet' }}</div>
+            {% if active_filter == 'all' %}<div>Generate your first batch above.</div>{% endif %}
+          </div>
+        </div></div>
+      {% endif %}
+
+      {% for t in topics %}
+      <div class="card topic-card"><div class="card__body">
+        <div class="topic-card__head">
+          <div style="min-width:0">
+            <div class="cluster">
+              <span class="badge badge--{{ 'pass' if t.priority.value == 'create' else 'warn' if t.priority.value == 'parked' else 'info' }}">
+                {{ 'rejected' if t.priority.value == 'retire' else t.priority.value }}
+              </span>
+              <span class="text-muted" style="font-size:var(--text-xs)">{{ t.content_type.value.replace('_', ' ') }}</span>
+              <span class="text-muted" style="font-size:var(--text-xs)">· {{ t.search_intent.value }}</span>
+              <span class="text-muted" style="font-size:var(--text-xs)">· {{ t.vendor.name }}</span>
+            </div>
+            <div class="topic-card__title">{{ t.title }}</div>
+            <div class="topic-card__keyword">keyword: {{ t.keyword }}</div>
+            {% set kw_warn = t.keyword|keyword_warning %}
+            {% if kw_warn %}
+              <div class="check__detail" style="color:var(--warn-text)">
+                <b>&#9888; {{ kw_warn }}</b></div>
+            {% endif %}
+            {% if t.rationale %}<div class="topic-card__rationale">{{ t.rationale }}</div>{% endif %}
+          </div>
+          <div class="topic-card__score">
+            <div class="topic-card__score-num">{{ t.opportunity_score }}</div>
+            <div class="topic-card__score-label">opportunity</div>
+          </div>
+        </div>
+        <div class="topic-card__breakdown">
+          <span>Commercial {{ t.commercial_score }} · SEO {{ t.seo_score }} · AI {{ t.ai_score }} · Difficulty {{ t.difficulty }}</span>
+          <div class="topic-card__actions">
+            {% if t.priority.value != 'create' %}
+            <form method="post" action="{{ url_for('topics.set_priority', topic_id=t.id) }}">
+              <input type="hidden" name="priority" value="create">
+              <button type="submit" class="topic-card__action topic-card__action--approve">Approve</button>
+            </form>
+            {% endif %}
+            {% if t.priority.value != 'parked' %}
+            <form method="post" action="{{ url_for('topics.set_priority', topic_id=t.id) }}">
+              <input type="hidden" name="priority" value="parked">
+              <button type="submit" class="topic-card__action topic-card__action--park">Park</button>
+            </form>
+            {% endif %}
+            {% if t.priority.value != 'retire' %}
+            <form method="post" action="{{ url_for('topics.set_priority', topic_id=t.id) }}">
+              <input type="hidden" name="priority" value="retire">
+              <button type="submit" class="topic-card__action topic-card__action--reject">Reject</button>
+            </form>
+            {% endif %}
+            <form method="post" action="{{ url_for('topics.delete', topic_id=t.id) }}">
+              <button type="submit" class="topic-card__action topic-card__action--delete">Delete</button>
+            </form>
+          </div>
+        </div>
+      </div></div>
+      {% endfor %}
+    </div>
+  </main>
+  {% include "_usage_modal.html" %}
+  {% include "_busy.html" %}
+</body>
+</html>
